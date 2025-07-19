@@ -8,7 +8,7 @@ namespace SupportTicketSystem
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // اتصال به دیتابیس
+            // Connect to db
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
