@@ -15,6 +15,10 @@ namespace SupportTicketSystem
             // Razor Pages
             builder.Services.AddRazorPages();
 
+            // ADD Session
+
+            builder.Services.AddSession();
+
             var app = builder.Build();
 
             // Middleware
@@ -29,6 +33,7 @@ namespace SupportTicketSystem
             app.UseRouting();
             app.UseAuthorization();
             app.MapRazorPages();
+            app.UseSession();
 
             app.Run();
         }
