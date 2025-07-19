@@ -12,9 +12,15 @@ namespace SupportTicketSystem.Pages
             _logger = logger;
         }
 
-        public void OnGet()
+        public IActionResult OnGet()
         {
+            if (HttpContext.Session.GetInt32("UserId") == null)
+            {
+                return RedirectToPage("/Login");
+            }
 
+            return Page();
         }
+
     }
 }
