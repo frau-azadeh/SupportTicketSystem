@@ -27,7 +27,15 @@
 
     <!-- Main content -->
     <main class="flex-1 p-6">
-        <div class="bg-white rounded-lg shadow p-6 max-w-2xl mx-auto">
+
+        <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 hidden">
+            <div id="toast" class="px-6 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 border border-gray-400 bg-white text-gray-700">
+                <span id="toast-icon"></span>
+                <span id="toast-message"></span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6  mx-auto">
             <h2 class="text-2xl font-bold mb-6 text-center">ارسال درخواست پشتیبانی</h2>
 
             <form method="post" enctype="multipart/form-data" class="space-y-5">
@@ -81,6 +89,23 @@
         });
     </script>
     <script>
+        function showToast(message, isSuccess = true) {
+            const toastContainer = document.getElementById("toast-container");
+            const toastMessage = document.getElementById("toast-message");
+            const toastIcon = document.getElementById("toast-icon");
+
+            toastMessage.textContent = message;
+            toastIcon.innerHTML = isSuccess
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L9 11.586 6.707 9.293a1 1 0 10-1.414 1.414L9 14.414l7.121-7.121a1 1 0 000-1.414z" clip-rule="evenodd" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-10.707a1 1 0 00-1.414-1.414L10 8.586 7.707 6.293a1 1 0 00-1.414 1.414L8.586 10l-2.293 2.293a1 1 0 001.414 1.414L10 11.414l2.293 2.293a1 1 0 001.414-1.414L11.414 10l2.293-2.293z" clip-rule="evenodd" /></svg>`;
+
+            toastContainer.classList.remove("hidden");
+
+            setTimeout(() => {
+                toastContainer.classList.add("hidden");
+            }, 3000);
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             const btn = document.getElementById("submit-btn");
             if (btn) {
@@ -95,27 +120,20 @@
                     }
 
                     axios.post('/api/tickets', formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data'
-                        },
+                        headers: { 'Content-Type': 'multipart/form-data' },
                         withCredentials: true
                     })
-                            .then(res => {
-                            console.log(res.data);
-                            alert("✅ " + (res.data?.message || "با موفقیت ثبت شد"));
+                    .then(res => {
+                        showToast(res.data?.message || "با موفقیت ثبت شد ✅", true);
                     })
-
                     .catch(err => {
                         console.error(err);
-                        alert("❌ ارسال تیکت با خطا مواجه شد.");
+                        showToast("❌ ارسال تیکت با خطا مواجه شد.", false);
                     });
                 });
-            } else {
-                console.warn("دکمه submit-btn پیدا نشد");
             }
         });
     </script>
-
 
 }
 
