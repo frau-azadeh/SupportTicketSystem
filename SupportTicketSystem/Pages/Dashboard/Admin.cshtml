@@ -24,16 +24,16 @@
         </nav>
     </aside>
 
-    <!-- Overlay (mobile only) -->
+    <!-- Overlay -->
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden md:hidden"></div>
 
     <!-- Main content -->
-    <main class="flex-1  p-6 transition-all">
+    <main class="flex-1 p-6 transition-all">
 
         <!-- Status Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow hover:shadow-md transition">
-                <h3 class="text-lg font-semibold mb-1">در حال بررسی</h3>
+                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
                 <p id="pending-count" class="text-2xl font-bold">۰</p>
             </div>
 
@@ -53,12 +53,11 @@
             </div>
         </div>
 
-
-
+        <!-- Ticket Table -->
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold">آخرین تیکت‌ها</h2>
-                <input type="text" placeholder="جستجو..." class="border rounded px-3 py-1 text-sm w-1/3" />
+                <h2 class="text-xl font-semibold">تیکت‌های ثبت‌شده</h2>
+                <input type="text" id="searchInput" placeholder="جستجو..." class="border rounded px-3 py-1 text-sm w-1/3" />
             </div>
 
             <div class="overflow-x-auto">
@@ -66,13 +65,15 @@
                     <thead class="bg-gray-100 text-gray-700">
                         <tr>
                             <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">کاربر</th>
                             <th class="px-4 py-2">عنوان</th>
                             <th class="px-4 py-2">وضعیت</th>
                             <th class="px-4 py-2">ارجاع به</th>
+                            <th class="px-4 py-2">عملیات</th>
                         </tr>
                     </thead>
                     <tbody id="ticketTable" class="text-gray-800">
-                        <!-- با API پر میشه -->
+                        <!-- API Rendered Rows -->
                     </tbody>
                 </table>
             </div>
@@ -82,7 +83,6 @@
 
 @section Scripts {
     <script>
-        // Toggle Sidebar
         const sidebar = document.getElementById("sidebar");
         const toggle = document.getElementById("menuToggle");
         const overlay = document.getElementById("overlay");
@@ -97,72 +97,58 @@
             overlay.classList.add("hidden");
         });
 
-        // API load
-        document.addEventListener("DOMContentLoaded", () => {
-            axios.get("/api/dashboard/admin")
-                .then(res => {
-                    const data = res.data;
-                    const table = document.getElementById("ticketTable");
-                    table.innerHTML = "";
+        async function loadTickets() {
+            try {
+                const res = await axios.get("/api/dashboard/admin");
+                const { tickets, itUsers, summary } = res.data;
+                const table = document.getElementById("ticketTable");
+                table.innerHTML = "";
 
-                    data.forEach((item, index) => {
-                        const row = document.createElement("tr");
-                        row.innerHTML = `
-                            <td class="border px-4 py-2">${index + 1}</td>
-                            <td class="border px-4 py-2">${item.title}</td>
-                            <td class="border px-4 py-2">${item.status}</td>
-                            <td class="border px-4 py-2">${item.assignedTo}</td>
-                        `;
-                        table.appendChild(row);
-                    });
-                })
-                .catch(err => {
-                    console.error("❌ خطا در دریافت داده‌ها:", err);
+                // Update counts
+                document.getElementById("pending-count").textContent = summary.pending;
+                document.getElementById("inprogress-count").textContent = summary.inprogress;
+                document.getElementById("done-count").textContent = summary.done;
+                document.getElementById("canceled-count").textContent = summary.canceled;
+
+                tickets.forEach((item, index) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td class="border px-4 py-2">${index + 1}</td>
+                        <td class="border px-4 py-2">${item.userName}</td>
+                        <td class="border px-4 py-2">${item.title}</td>
+                        <td class="border px-4 py-2">${item.status}</td>
+                        <td class="border px-4 py-2">
+                            <select class="assign-dropdown border rounded px-2 py-1 text-sm">
+                                <option value="">انتخاب کارشناس</option>
+                                ${itUsers.map(u => `
+                                    <option value="${u.id}" ${u.id === item.assignedToId ? 'selected' : ''}>${u.fullName}</option>
+                                `).join('')}
+                            </select>
+                        </td>
+                        <td class="border px-4 py-2">
+                            <button class="update-btn bg-blue-500 text-white px-3 py-1 rounded text-xs" data-id="${item.id}">ثبت</button>
+                        </td>
+                    `;
+                    table.appendChild(row);
                 });
+            } catch (err) {
+                console.error("خطا در دریافت داده‌ها:", err);
+            }
+        }
+
+        document.addEventListener("click", async (e) => {
+            if (e.target.classList.contains("update-btn")) {
+                const id = e.target.dataset.id;
+                const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
+                const userId = dropdown.value;
+                await axios.post("/api/dashboard/assign", {
+                    ticketId: id,
+                    userId: userId
+                });
+                await loadTickets();
+            }
         });
 
-
-            axios.get("/api/dashboard/admin")
-        .then(res => {
-            const data = res.data;
-            const table = document.getElementById("ticketTable");
-            table.innerHTML = "";
-
-            // مقداردهی اولیه به شمارنده‌ها
-            let pending = 0;
-            let inprogress = 0;
-            let done = 0;
-            let canceled = 0;
-
-            data.forEach((item, index) => {
-                // محاسبه شمارش بر اساس وضعیت
-                switch (item.status) {
-                    case "در حال بررسی":
-                        pending++; break;
-                    case "در حال انجام":
-                        inprogress++; break;
-                    case "انجام شده":
-                        done++; break;
-                    case "باطل شده":
-                        canceled++; break;
-                }
-
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td class="border px-4 py-2">${index + 1}</td>
-                    <td class="border px-4 py-2">${item.title}</td>
-                    <td class="border px-4 py-2">${item.status}</td>
-                    <td class="border px-4 py-2">${item.assignedTo}</td>
-                `;
-                table.appendChild(row);
-            });
-
-            // به‌روزرسانی کارت‌ها
-            document.getElementById("pending-count").textContent = pending;
-            document.getElementById("inprogress-count").textContent = inprogress;
-            document.getElementById("done-count").textContent = done;
-            document.getElementById("canceled-count").textContent = canceled;
-        })
-
+        document.addEventListener("DOMContentLoaded", loadTickets);
     </script>
 }

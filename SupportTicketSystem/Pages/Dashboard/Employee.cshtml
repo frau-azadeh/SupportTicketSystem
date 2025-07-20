@@ -35,6 +35,51 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-lg shadow p-4 mb-6 overflow-x-auto">
+            <h2 class="text-lg font-bold mb-3">تاریخچه تیکت‌های شما</h2>
+            @if (Model.UserTickets.Any())
+            {
+                <table class="w-full text-sm border border-gray-200">
+                    <thead class="bg-gray-100 text-right">
+                        <tr>
+                            <th class="p-2">عنوان</th>
+                            <th class="p-2">تاریخ</th>
+                            <th class="p-2">اولویت</th>
+                            <th class="p-2">وضعیت</th>
+                            <th class="p-2">فایل</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticket-list">
+                        @foreach (var ticket in Model.UserTickets)
+                        {
+                            <tr class="border-t border-gray-200">
+                                <td class="p-2">@ticket.Title</td>
+                                <td class="p-2">@ticket.CreatedAtPersion</td>
+                                <td class="p-2">@ticket.Priority</td>
+                                <td class="p-2">@ticket.Status</td>
+                                <td class="p-2">
+                                    @if (!string.IsNullOrEmpty(ticket.AttachmentPath))
+                                    {
+                                        <a href="@ticket.AttachmentPath" target="_blank" class="text-blue-600 underline">دانلود</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-400">ندارد</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+            }
+            else
+            {
+                <div class="text-gray-500 text-sm">هنوز تیکتی ارسال نکرده‌اید.</div>
+            }
+        </div>
+
+
         <div class="bg-white rounded-lg shadow p-6  mx-auto">
             <h2 class="text-2xl font-bold mb-6 text-center">ارسال درخواست پشتیبانی</h2>
 
@@ -111,10 +156,14 @@
             if (btn) {
                 btn.addEventListener("click", function () {
                     const formData = new FormData();
-                    formData.append("title", document.querySelector('[name="title"]').value);
-                    formData.append("description", document.querySelector('[name="description"]').value);
-                    formData.append("priority", document.querySelector('[name="priority"]').value);
+                    const title = document.querySelector('[name="title"]').value;
+                    const description = document.querySelector('[name="description"]').value;
+                    const priority = document.querySelector('[name="priority"]').value;
                     const fileInput = document.querySelector('[name="attachment"]');
+
+                    formData.append("title", title);
+                    formData.append("description", description);
+                    formData.append("priority", priority);
                     if (fileInput.files.length > 0) {
                         formData.append("attachment", fileInput.files[0]);
                     }
@@ -125,6 +174,32 @@
                     })
                     .then(res => {
                         showToast(res.data?.message || "با موفقیت ثبت شد ✅", true);
+
+                        //without refresh 
+                        const now = new Date();
+                        const persianDate = now.toLocaleDateString('fa-IR');
+
+                        const newRow = document.createElement("tr");
+                        newRow.className = "border-t border-gray-200";
+                        newRow.innerHTML = `
+                            <td class="p-2">${title}</td>
+                            <td class="p-2">${persianDate}</td>
+                            <td class="p-2">${priority}</td>
+                            <td class="p-2">در انتظار بررسی</td>
+                            <td class="p-2">
+                                ${fileInput.files.length > 0
+                                    ? `<span class="text-gray-400">منتشر نشده</span>`
+                                    : `<span class="text-gray-400">ندارد</span>`}
+                            </td>
+                        `;
+
+                        const tableBody = document.getElementById("ticket-list");
+                        if (tableBody) {
+                            tableBody.prepend(newRow);
+                        }
+
+                        // reset
+                        document.querySelector("form").reset();
                     })
                     .catch(err => {
                         console.error(err);
@@ -134,6 +209,7 @@
             }
         });
     </script>
+
 
 }
 
