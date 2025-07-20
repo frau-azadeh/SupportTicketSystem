@@ -1,58 +1,42 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using SupportTicketSystem.Data;
-using SupportTicketSystem.Models;
+﻿@page
+@model SupportTicketSystem.Pages.LoginModel
 
-namespace SupportTicketSystem.Pages
-{
-    public class LoginModel : PageModel
-    {
-        private readonly AppDbContext _context;
-
-        public LoginModel(AppDbContext context)
-        {
-            _context = context;
-        }
-
-        [BindProperty]
-        public string Username { get; set; }  // ✅ استفاده از نام کاربری
-
-        [BindProperty]
-        public string Password { get; set; }
-
-        public string? ErrorMessage { get; set; }
-
-        public void OnGet()
-        {
-            HttpContext.Session.Clear();
-        }
-
-        public IActionResult OnPost()
-        {
-            var user = _context.Users.FirstOrDefault(u => u.Username == Username && u.Password == Password);
-
-            if (user == null)
-            {
-                ErrorMessage = "❌ اطلاعات ورود اشتباه است.";
-                return Page();
-            }
-
-            // ذخیره اطلاعات در سشن
-            HttpContext.Session.SetInt32("UserId", user.Id);
-            HttpContext.Session.SetString("UserName", user.FullName);
-            HttpContext.Session.SetString("Role", user.Role ?? "");
-
-            // مسیر دهی بر اساس Role
-            switch (user.Role)
-            {
-                case "Admin":
-                    return RedirectToPage("/Dashboard/Admin");
-                case "IT":
-                    return RedirectToPage("/Dashboard/IT");
-                case "Employee":
-                default:
-                    return RedirectToPage("/Dashboard/Employee");
-            }
-        }
-    }
+@{
+    ViewData["Title"] = "ورود";
 }
+
+<div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg p-8 space-y-6">
+
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-4">سامانه پشتیبانی</h1>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="bg-red-100 text-red-700 text-sm rounded px-4 py-2 text-center">
+                @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post" class="space-y-5">
+
+            <div>
+                <input asp-for="Username"
+                       placeholder="نام کاربری"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+            </div>
+
+            <div>
+                <input asp-for="Password"
+                       type="password"
+                       placeholder="رمز عبور"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md transition duration-300 shadow">
+                ورود
+            </button>
+
+        </form>
+    </div>
+</div>
