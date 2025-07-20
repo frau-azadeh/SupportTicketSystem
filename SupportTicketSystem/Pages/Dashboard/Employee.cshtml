@@ -101,9 +101,9 @@
                         withCredentials: true
                     })
                             .then(res => {
-            console.log(res.data);
-            alert("✅ " + (res.data?.message || "با موفقیت ثبت شد"));
-        })
+                            console.log(res.data);
+                            alert("✅ " + (res.data?.message || "با موفقیت ثبت شد"));
+                    })
 
                     .catch(err => {
                         console.error(err);
