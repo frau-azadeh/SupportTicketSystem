@@ -16,40 +16,47 @@ namespace SupportTicketSystem.Api
         {
             _context = context;
         }
-
-        [HttpGet("admin")]
-        public async Task<IActionResult> GetAllTickets()
+[HttpGet("admin")]
+public async Task<IActionResult> GetAllTickets()
+{
+    var itUsers = await _context.Users
+        .Where(u => u.Role == "IT")
+        .Select(u => new
         {
-            var itUsers = await _context.Users
-                .Where(u => u.Role == "IT")
-                .Select(u => new
-                {
-                    Id = u.Id,
-                    FullName = u.FullName
-                })
-                .ToListAsync();
+            Id = u.Id,
+            FullName = u.FullName
+        })
+        .ToListAsync();
 
-            var tickets = await _context.Tickets
-                .Include(t => t.CreatedByUser)
-                .Include(t => t.AssignedToUser)
-                .OrderByDescending(t => t.CreatedAt)
-                .Select(t => new
-                {
-                    t.Id,
-                    t.Title,
-                    UserName = t.CreatedByUser.FullName,
-                    Status = t.Status ?? "در حال بررسی",
-                    AssignedTo = t.AssignedToUser != null ? t.AssignedToUser.FullName : "هنوز ارجاع نشده",
-                    AssignedToId = t.AssignedToUserId,
-                })
-                .ToListAsync();
+    var tickets = await _context.Tickets
+        .Include(t => t.CreatedByUser)
+        .Include(t => t.AssignedToUser)
+        .ToListAsync();
 
-            return Ok(new
-            {
-                tickets,
-                itUsers
-            });
+    var response = new
+    {
+        tickets = tickets.Select(t => new
+        {
+            t.Id,
+            t.Title,
+            UserName = t.CreatedByUser.FullName,
+            Status = t.Status ?? "در حال بررسی",
+            AssignedTo = t.AssignedToUser != null ? t.AssignedToUser.FullName : "هنوز ارجاع نشده",
+            AssignedToId = t.AssignedToUserId,
+        }),
+        itUsers,
+        summary = new
+        {
+            pending = tickets.Count(t => t.Status == null || t.Status == "در انتظار بررسی"),
+            inprogress = tickets.Count(t => t.Status == "در حال انجام"),
+            done = tickets.Count(t => t.Status == "انجام شده"),
+            canceled = tickets.Count(t => t.Status == "باطل شده")
         }
+    };
+
+    return Ok(response);
+}
+
 
 
         [HttpGet("it-users")]
