@@ -1,30 +1,87 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SupportTicketSystem.Data;
 
-namespace SupportTicketSystem.Controllers
+namespace SupportTicketSystem.Api
 {
-    [ApiController]
     [Route("api/dashboard")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
     public class DashboardController : ControllerBase
     {
-        [HttpGet("admin")]
-        public IActionResult GetAdminData()
+        private readonly AppDbContext _context;
+
+        public DashboardController(AppDbContext context)
         {
-            var cards = new[]
-            {
-                new { label = "تیکت‌های جدید", count = 12 },
-                new { label = "در حال بررسی", count = 5 },
-                new { label = "پاسخ داده شده", count = 22 },
-                new { label = "بسته شده", count = 7 },
-            };
-
-            var tickets = new[]
-            {
-                new { title = "مشکل لاگین", status = "باز", assignee = "واحد IT" },
-                new { title = "درخواست افزایش دسترسی", status = "در حال بررسی", assignee = "مدیر" },
-                new { title = "بروزرسانی نرم‌افزار", status = "انجام شده", assignee = "پشتیبانی" },
-            };
-
-            return Ok(new { cards, tickets });
+            _context = context;
         }
+
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetAllTickets()
+        {
+            var itUsers = await _context.Users
+                .Where(u => u.Role == "IT")
+                .Select(u => new
+                {
+                    Id = u.Id,
+                    FullName = u.FullName
+                })
+                .ToListAsync();
+
+            var tickets = await _context.Tickets
+                .Include(t => t.CreatedByUser)
+                .Include(t => t.AssignedToUser)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    UserName = t.CreatedByUser.FullName,
+                    Status = t.Status ?? "در حال بررسی",
+                    AssignedTo = t.AssignedToUser != null ? t.AssignedToUser.FullName : "هنوز ارجاع نشده",
+                    AssignedToId = t.AssignedToUserId,
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                tickets,
+                itUsers
+            });
+        }
+
+
+        [HttpGet("it-users")]
+        public async Task<IActionResult> GetITUsers()
+        {
+            var its = await _context.Users
+                .Where(u => u.Role == "IT")
+                .Select(u => new { u.Id, u.FullName })
+                .ToListAsync();
+
+            return Ok(its);
+        }
+        [HttpPost("assign")]
+        public async Task<IActionResult> AssignTicket([FromBody] AssignDto dto)
+        {
+            var ticket = await _context.Tickets.FindAsync(dto.TicketId);
+
+            if (ticket == null)
+                return NotFound("تیکت پیدا نشد");
+
+            ticket.AssignedToUserId = dto.UserId;
+            ticket.Status = "در حال انجام";
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "تیکت با موفقیت ارجاع داده شد" });
+        }
+
+        public class AssignDto
+        {
+            public int TicketId { get; set; }
+            public int UserId { get; set; }
+        }
+
     }
 }
