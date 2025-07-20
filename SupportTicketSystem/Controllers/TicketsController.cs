@@ -1,52 +1,64 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SupportTicketSystem.Data;
 using SupportTicketSystem.Models;
 
-[ApiController]
-[Route("api/[controller]")]
-public class TicketsController : ControllerBase
+namespace SupportTicketSystem.Api
 {
-    private readonly AppDbContext _context;
-    private readonly IWebHostEnvironment _env;
-
-    public TicketsController(AppDbContext context, IWebHostEnvironment env)
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class TicketsController : ControllerBase
     {
-        _context = context;
-        _env = env;
-    }
+        private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-    [HttpPost]
-    public async Task<IActionResult> SubmitTicket([FromForm] TicketDto dto)
-    {
-        string filePath = null;
-
-        if (dto.Attachment != null)
+        public TicketsController(AppDbContext context, IWebHostEnvironment env)
         {
-            var uploads = Path.Combine(_env.WebRootPath, "uploads");
-            Directory.CreateDirectory(uploads);
-            var fileName = Guid.NewGuid() + Path.GetExtension(dto.Attachment.FileName);
-            var path = Path.Combine(uploads, fileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
-            {
-                await dto.Attachment.CopyToAsync(stream);
-            }
-
-            filePath = "/uploads/" + fileName;
+            _context = context;
+            _env = env;
         }
 
-        var ticket = new Ticket
+        [HttpPost]
+        public async Task<IActionResult> CreateTicket([FromForm] TicketDto dto)
         {
-            Title = dto.Title,
-            Description = dto.Description,
-            Priority = dto.Priority,
-            FilePath = filePath,
-            CreatedBy = User.Identity?.Name ?? "کاربر ناشناس"
-        };
+            var userIdClaim = User.FindFirst("UserId")?.Value;
 
-        _context.Tickets.Add(ticket);
-        await _context.SaveChangesAsync();
+            if (!int.TryParse(userIdClaim, out int userId))
+                return Unauthorized("کاربر شناسایی نشد");
 
-        return Ok(new { message = "تیکت با موفقیت ثبت شد." });
+            string? filePath = null;
+
+            if (dto.Attachment != null && dto.Attachment.Length > 0)
+            {
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.Attachment.FileName)}";
+                var uploadPath = Path.Combine(_env.WebRootPath, "uploads");
+
+                if (!Directory.Exists(uploadPath))
+                    Directory.CreateDirectory(uploadPath);
+
+                var fullPath = Path.Combine(uploadPath, fileName);
+
+                using var stream = new FileStream(fullPath, FileMode.Create);
+                await dto.Attachment.CopyToAsync(stream);
+
+                filePath = "/uploads/" + fileName;
+            }
+
+            var ticket = new Ticket
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                Priority = dto.Priority,
+                AttachmentPath = filePath,
+                CreatedAt = DateTime.Now,
+                CreatedByUserId = userId
+            };
+
+            _context.Tickets.Add(ticket);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "تیکت با موفقیت ثبت شد." });
+        }
     }
 }
