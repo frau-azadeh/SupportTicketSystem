@@ -33,7 +33,7 @@
         <!-- Status Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow hover:shadow-md transition">
-                <h3 class="text-lg font-semibold mb-1">در حال بررسی</h3>
+                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
                 <p id="pending-count" class="text-2xl font-bold">۰</p>
             </div>
 
@@ -97,23 +97,20 @@
             overlay.classList.add("hidden");
         });
 
-                async function loadTickets() {
+        async function loadTickets() {
             try {
                 const res = await axios.get("/api/dashboard/admin");
-                const { tickets, itUsers } = res.data;
+                const { tickets, itUsers, summary } = res.data;
                 const table = document.getElementById("ticketTable");
                 table.innerHTML = "";
 
-                let pending = 0, inprogress = 0, done = 0, canceled = 0;
+                // Update counts
+                document.getElementById("pending-count").textContent = summary.pending;
+                document.getElementById("inprogress-count").textContent = summary.inprogress;
+                document.getElementById("done-count").textContent = summary.done;
+                document.getElementById("canceled-count").textContent = summary.canceled;
 
                 tickets.forEach((item, index) => {
-                    switch (item.status) {
-                        case "در حال بررسی": pending++; break;
-                        case "در حال انجام": inprogress++; break;
-                        case "انجام شده": done++; break;
-                        case "باطل شده": canceled++; break;
-                    }
-
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td class="border px-4 py-2">${index + 1}</td>
@@ -134,25 +131,21 @@
                     `;
                     table.appendChild(row);
                 });
-
-                document.getElementById("pending-count").textContent = pending;
-                document.getElementById("inprogress-count").textContent = inprogress;
-                document.getElementById("done-count").textContent = done;
-                document.getElementById("canceled-count").textContent = canceled;
-
             } catch (err) {
                 console.error("خطا در دریافت داده‌ها:", err);
             }
         }
 
-        // رویداد ثبت ارجاع
         document.addEventListener("click", async (e) => {
             if (e.target.classList.contains("update-btn")) {
                 const id = e.target.dataset.id;
                 const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
                 const userId = dropdown.value;
-                await axios.post(`/api/tickets/assign/${id}`, { userId });
-                await loadTickets(); // بروز رسانی جدول
+                await axios.post("/api/dashboard/assign", {
+                    ticketId: id,
+                    userId: userId
+                });
+                await loadTickets();
             }
         });
 
