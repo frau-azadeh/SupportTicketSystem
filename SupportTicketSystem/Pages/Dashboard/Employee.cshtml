@@ -35,6 +35,50 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-lg shadow p-4 mb-6 overflow-x-auto">
+            <h2 class="text-lg font-bold mb-3">تاریخچه تیکت‌های شما</h2>
+            @if (Model.UserTickets.Any())
+            {
+                <table class="w-full text-sm border border-gray-200">
+                    <thead class="bg-gray-100 text-right">
+                        <tr>
+                            <th class="p-2">عنوان</th>
+                            <th class="p-2">تاریخ</th>
+                            <th class="p-2">اولویت</th>
+                            <th class="p-2">وضعیت</th>
+                            <th class="p-2">فایل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in Model.UserTickets)
+                        {
+                            <tr class="border-t border-gray-200">
+                                <td class="p-2">@ticket.Title</td>
+                                <td class="p-2">@ticket.CreatedAtPersion</td>
+                                <td class="p-2">@ticket.Priority</td>
+                                <td class="p-2">@ticket.Status</td>
+                                <td class="p-2">
+                                    @if (!string.IsNullOrEmpty(ticket.AttachmentPath))
+                                    {
+                                        <a href="@ticket.AttachmentPath" target="_blank" class="text-blue-600 underline">دانلود</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-gray-400">ندارد</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="text-gray-500 text-sm">هنوز تیکتی ارسال نکرده‌اید.</div>
+            }
+        </div>
+
+
         <div class="bg-white rounded-lg shadow p-6  mx-auto">
             <h2 class="text-2xl font-bold mb-6 text-center">ارسال درخواست پشتیبانی</h2>
 
