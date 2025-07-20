@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\fonts\" />
-    <Folder Include="wwwroot\NewFolder\" />
+    <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
 </Project>

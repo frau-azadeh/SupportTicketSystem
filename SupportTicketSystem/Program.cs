@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SupportTicketSystem.Data; 
+using SupportTicketSystem.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 namespace SupportTicketSystem
 {
     public class Program
@@ -8,16 +10,22 @@ namespace SupportTicketSystem
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Connect to db
+            // اتصال به دیتابیس
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Razor Pages
             builder.Services.AddRazorPages();
 
-            // ADD Session
-
+            // Session
             builder.Services.AddSession();
+
+            // احراز هویت با کوکی
+            builder.Services.AddAuthentication("Cookies")
+                .AddCookie("Cookies", options =>
+                {
+                    options.LoginPath = "/Login";
+                });
 
             var app = builder.Build();
 
@@ -30,10 +38,15 @@ namespace SupportTicketSystem
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
             app.UseRouting();
-            app.UseAuthorization();
-            app.MapRazorPages();
+
             app.UseSession();
+            app.UseAuthentication(); 
+            app.UseAuthorization();
+
+            app.MapRazorPages();
+            app.MapControllers(); 
 
             app.Run();
         }
