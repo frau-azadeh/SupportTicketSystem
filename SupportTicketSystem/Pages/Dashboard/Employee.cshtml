@@ -79,4 +79,21 @@
             overlay.classList.add("hidden");
         });
     </script>
+    <script>
+        const form = document.querySelector("form");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+
+            try {
+                const res = await axios.post("/api/tickets", formData);
+                alert("✅ تیکت شما با موفقیت ارسال شد.");
+                form.reset();
+            } catch (err) {
+                alert("❌ ارسال تیکت با خطا مواجه شد.");
+            }
+        });
+    </script>
 }
