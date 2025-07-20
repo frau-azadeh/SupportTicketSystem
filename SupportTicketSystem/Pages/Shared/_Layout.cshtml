@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - SupportTicketSystem</title>
 
-    <link href="~/css/output.css" rel="stylesheet" />
-    <link href="~/css/site.css" rel="stylesheet" />
+    
     <link href="~/css/input.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" />
+    <link href="~/css/output.css" rel="stylesheet" />
 
     <link href="~/css/fonts.css" rel="stylesheet" />
 </head>
@@ -27,7 +28,7 @@
     </header>
 
    
-    <main class="max-w-6xl mx-auto px-4">
+    <main class="w-full mx-auto px-4">
         @RenderBody()
     </main>
 
@@ -38,5 +39,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 </body>
 </html>

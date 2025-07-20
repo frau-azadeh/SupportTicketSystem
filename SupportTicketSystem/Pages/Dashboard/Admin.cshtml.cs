@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace SupportTicketSystem.Pages
+namespace SupportTicketSystem.Pages.Dashboard
 {
-    public class DashboardModel : PageModel
+    public class AdminModel : PageModel
     {
         public void OnGet()
         {

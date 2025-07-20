@@ -15,7 +15,7 @@ namespace SupportTicketSystem.Pages
         }
 
         [BindProperty]
-        public string Username { get; set; }  // ✅ تغییر از Email به Username
+        public string Username { get; set; }  // ✅ استفاده از نام کاربری
 
         [BindProperty]
         public string Password { get; set; }
@@ -42,7 +42,17 @@ namespace SupportTicketSystem.Pages
             HttpContext.Session.SetString("UserName", user.FullName);
             HttpContext.Session.SetString("Role", user.Role ?? "");
 
-            return RedirectToPage("/Dashboard"); 
+            // مسیر دهی بر اساس Role
+            switch (user.Role)
+            {
+                case "Admin":
+                    return RedirectToPage("/Dashboard/Admin");
+                case "IT":
+                    return RedirectToPage("/Dashboard/IT");
+                case "Employee":
+                default:
+                    return RedirectToPage("/Dashboard/Employee");
+            }
         }
     }
 }
