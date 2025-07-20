@@ -42,11 +42,11 @@ namespace SupportTicketSystem
             app.UseRouting();
 
             app.UseSession();
-            app.UseAuthentication(); // 👈 قبل از Authorization
+            app.UseAuthentication(); 
             app.UseAuthorization();
 
             app.MapRazorPages();
-            app.MapControllers(); // اگر API استفاده می‌کنی، لازمه
+            app.MapControllers(); 
 
             app.Run();
         }
