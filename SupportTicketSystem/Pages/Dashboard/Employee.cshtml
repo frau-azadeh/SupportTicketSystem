@@ -43,11 +43,12 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">اولویت</label>
-                    <select name="priority" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select name="priority" id="priority" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="کم">کم</option>
                         <option value="متوسط">متوسط</option>
                         <option value="زیاد">زیاد</option>
                     </select>
+
                 </div>
 
                 <div>
@@ -55,7 +56,7 @@
                     <input type="file" name="attachment" class="w-full" />
                 </div>
 
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
+                <button id="submit-btn"  type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
                     ارسال درخواست
                 </button>
             </form>
@@ -80,20 +81,42 @@
         });
     </script>
     <script>
-        const form = document.querySelector("form");
+        document.addEventListener("DOMContentLoaded", function () {
+            const btn = document.getElementById("submit-btn");
+            if (btn) {
+                btn.addEventListener("click", function () {
+                    const formData = new FormData();
+                    formData.append("title", document.querySelector('[name="title"]').value);
+                    formData.append("description", document.querySelector('[name="description"]').value);
+                    formData.append("priority", document.querySelector('[name="priority"]').value);
+                    const fileInput = document.querySelector('[name="attachment"]');
+                    if (fileInput.files.length > 0) {
+                        formData.append("attachment", fileInput.files[0]);
+                    }
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
+                    axios.post('/api/tickets', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        },
+                        withCredentials: true
+                    })
+                            .then(res => {
+            console.log(res.data);
+            alert("✅ " + (res.data?.message || "با موفقیت ثبت شد"));
+        })
 
-            const formData = new FormData(form);
-
-            try {
-                const res = await axios.post("/api/tickets", formData);
-                alert("✅ تیکت شما با موفقیت ارسال شد.");
-                form.reset();
-            } catch (err) {
-                alert("❌ ارسال تیکت با خطا مواجه شد.");
+                    .catch(err => {
+                        console.error(err);
+                        alert("❌ ارسال تیکت با خطا مواجه شد.");
+                    });
+                });
+            } else {
+                console.warn("دکمه submit-btn پیدا نشد");
             }
         });
     </script>
+
+
 }
+
+
