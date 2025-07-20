@@ -10,6 +10,10 @@ namespace SupportTicketSystem.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public string Status { get; set; } = "در انتظار بررسی";
 
+        public string? Priority { get; set; }    
+        public string? AttachmentPath { get; set; }  
+
+
         public int CreatedByUserId { get; set; }
         public User? CreatedByUser { get; set; }
 
