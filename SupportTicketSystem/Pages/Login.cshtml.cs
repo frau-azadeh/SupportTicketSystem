@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SupportTicketSystem.Data;
-using SupportTicketSystem.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace SupportTicketSystem.Pages
 {
@@ -15,19 +17,20 @@ namespace SupportTicketSystem.Pages
         }
 
         [BindProperty]
-        public string Username { get; set; }  // ✅ استفاده از نام کاربری
+        public string Username { get; set; }
 
         [BindProperty]
         public string Password { get; set; }
 
         public string? ErrorMessage { get; set; }
 
-        public void OnGet()
+        public async Task<IActionResult> OnGetAsync()
         {
-            HttpContext.Session.Clear();
+            await HttpContext.SignOutAsync("Cookies");
+            return Page();
         }
 
-        public IActionResult OnPost()
+        public async Task<IActionResult> OnPostAsync()
         {
             var user = _context.Users.FirstOrDefault(u => u.Username == Username && u.Password == Password);
 
@@ -37,22 +40,24 @@ namespace SupportTicketSystem.Pages
                 return Page();
             }
 
-            // ذخیره اطلاعات در سشن
-            HttpContext.Session.SetInt32("UserId", user.Id);
-            HttpContext.Session.SetString("UserName", user.FullName);
-            HttpContext.Session.SetString("Role", user.Role ?? "");
-
-            // مسیر دهی بر اساس Role
-            switch (user.Role)
+            var claims = new List<Claim>
             {
-                case "Admin":
-                    return RedirectToPage("/Dashboard/Admin");
-                case "IT":
-                    return RedirectToPage("/Dashboard/IT");
-                case "Employee":
-                default:
-                    return RedirectToPage("/Dashboard/Employee");
-            }
+                new Claim(ClaimTypes.Name, user.FullName),
+                new Claim("UserId", user.Id.ToString()),
+                new Claim(ClaimTypes.Role, user.Role ?? "")
+            };
+
+            var identity = new ClaimsIdentity(claims, "Cookies");
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("Cookies", principal);
+
+            return user.Role switch
+            {
+                "Admin" => RedirectToPage("/Dashboard/Admin"),
+                "IT" => RedirectToPage("/Dashboard/IT"),
+                _ => RedirectToPage("/Dashboard/Employee")
+            };
         }
     }
 }
