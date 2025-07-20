@@ -1,4 +1,146 @@
 ﻿@page
 @model SupportTicketSystem.Pages.Dashboard.ITModel
 @{
+    ViewData["Title"] = "پنل IT";
+    Layout = "_Layout";
+}
+
+<div class="min-h-screen flex bg-gray-100 font-vazir">
+    <!-- Mobile Menu -->
+    <div class="md:hidden fixed top-4 right-4 z-50">
+        <button id="menuToggle" class="bg-[#1e293b] text-white p-2 rounded-md shadow-md">☰</button>
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-[#1e293b] text-white w-64 p-6 space-y-4 transform md:translate-x-0 -translate-x-full fixed md:relative top-0 left-0 h-full md:h-auto z-40 transition-transform duration-300 ease-in-out rounded-r-xl shadow-2xl">
+        <h2 class="text-xl font-bold border-b border-gray-600 pb-4 mb-4">پنل IT</h2>
+        <nav class="flex-1 space-y-2 text-sm font-medium">
+            <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">📥 درخواست‌ها</a>
+            <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">📊 آمار</a>
+        </nav>
+    </aside>
+
+    <!-- Overlay (for mobile) -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden md:hidden"></div>
+
+    <!-- Main -->
+    <main class="flex-1 p-6 transition-all w-full">
+        <!-- Status Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow">
+                <h3 class="text-lg font-semibold mb-1">در حال بررسی</h3>
+                <p id="pending-count" class="text-2xl font-bold">۰</p>
+            </div>
+            <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
+                <h3 class="text-lg font-semibold mb-1">در حال انجام</h3>
+                <p id="inprogress-count" class="text-2xl font-bold">۰</p>
+            </div>
+            <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 shadow">
+                <h3 class="text-lg font-semibold mb-1">انجام شده</h3>
+                <p id="done-count" class="text-2xl font-bold">۰</p>
+            </div>
+            <div class="bg-red-100 border border-red-300 text-red-800 rounded-lg p-4 shadow">
+                <h3 class="text-lg font-semibold mb-1">باطل شده</h3>
+                <p id="canceled-count" class="text-2xl font-bold">۰</p>
+            </div>
+        </div>
+
+        <!-- Ticket Table -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">درخواست‌های کاربران</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-right border-collapse">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">عنوان</th>
+                            <th class="px-4 py-2">توضیح</th>
+                            <th class="px-4 py-2">اولویت</th>
+                            <th class="px-4 py-2">فایل</th>
+                            <th class="px-4 py-2">وضعیت</th>
+                            <th class="px-4 py-2">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketTable" class="text-gray-800">
+                        <!-- با API پر میشه -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+@section Scripts {
+    <script>
+        const sidebar = document.getElementById("sidebar");
+        const toggle = document.getElementById("menuToggle");
+        const overlay = document.getElementById("overlay");
+
+        toggle?.addEventListener("click", () => {
+            sidebar.classList.toggle("-translate-x-full");
+            overlay.classList.toggle("hidden");
+        });
+
+        overlay?.addEventListener("click", () => {
+            sidebar.classList.add("-translate-x-full");
+            overlay.classList.add("hidden");
+        });
+
+        // API Data
+        document.addEventListener("DOMContentLoaded", () => {
+            axios.get("/api/dashboard/it").then(res => {
+                const data = res.data;
+                const table = document.getElementById("ticketTable");
+                let pending = 0, inprogress = 0, done = 0, canceled = 0;
+                table.innerHTML = "";
+
+                data.forEach((item, index) => {
+                    switch (item.status) {
+                        case "در حال بررسی": pending++; break;
+                        case "در حال انجام": inprogress++; break;
+                        case "انجام شده": done++; break;
+                        case "باطل شده": canceled++; break;
+                    }
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td class="border px-4 py-2">${index + 1}</td>
+                        <td class="border px-4 py-2">${item.title}</td>
+                        <td class="border px-4 py-2">${item.description}</td>
+                        <td class="border px-4 py-2">${item.priority}</td>
+                        <td class="border px-4 py-2">
+                            ${item.fileUrl ? `<a href="${item.fileUrl}" class="text-blue-600 underline" target="_blank">دانلود</a>` : '—'}
+                        </td>
+                        <td class="border px-4 py-2">${item.status}</td>
+                        <td class="border px-4 py-2">
+                            <select data-id="${item.id}" class="statusUpdate border rounded p-1 text-sm">
+                                <option>در حال بررسی</option>
+                                <option>در حال انجام</option>
+                                <option>انجام شده</option>
+                                <option>باطل شده</option>
+                            </select>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+
+                document.getElementById("pending-count").textContent = pending;
+                document.getElementById("inprogress-count").textContent = inprogress;
+                document.getElementById("done-count").textContent = done;
+                document.getElementById("canceled-count").textContent = canceled;
+
+                // Update status on change
+                document.querySelectorAll(".statusUpdate").forEach(select => {
+                    select.value = select.closest("tr").children[5].textContent.trim();
+                    select.addEventListener("change", (e) => {
+                        const id = select.dataset.id;
+                        const newStatus = e.target.value;
+                        axios.put(`/api/tickets/${id}/status`, { status: newStatus })
+                            .then(() => location.reload())
+                            .catch(err => alert("خطا در تغییر وضعیت"));
+                    });
+                });
+            });
+        });
+    </script>
 }
