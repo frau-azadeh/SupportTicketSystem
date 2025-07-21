@@ -81,9 +81,11 @@
                         <option>باطل شده</option>
                     </select>
                 </div>
+                <button onclick="generatePDF()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">دانلود گزارش PDF</button>
             </div>
 
-            <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
+            <div id="report-content" class="w-100" ">
+                <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
                 <thead class="bg-gray-100 text-gray-700 rounded-md">
                     <tr>
                         <th class="px-4 py-2">#</th>
@@ -98,9 +100,10 @@
                     <!-- Paginated Rows -->
                 </tbody>
             </table>
-
+            
             <!-- Pagination Controls -->
             <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
+            </div>
         </div>
     </main>
 </div>
@@ -108,6 +111,7 @@
 
 @section Scripts {
     <script>
+        // Sidebar toggle functionality for mobile
         const sidebar = document.getElementById("sidebar");
         const toggle = document.getElementById("menuToggle");
         const overlay = document.getElementById("overlay");
@@ -126,6 +130,7 @@
             overlay.classList.add("hidden");
         });
 
+        // Load tickets from API
         async function loadTickets() {
             try {
                 const res = await axios.get("/api/dashboard/admin");
@@ -140,6 +145,7 @@
             }
         }
 
+        // Update status count cards
         function updateCounts(summary) {
             document.getElementById("pending-count").textContent = summary.pending;
             document.getElementById("inprogress-count").textContent = summary.inprogress;
@@ -147,6 +153,7 @@
             document.getElementById("canceled-count").textContent = summary.canceled;
         }
 
+        // Apply filters to tickets
         function applyFilters() {
             const search = document.getElementById("searchInput").value.trim().toLowerCase();
             const status = document.getElementById("statusFilter").value;
@@ -158,6 +165,7 @@
             renderPaginated(filtered);
         }
 
+        // Render paginated table
         function renderPaginated(tickets) {
             const start = (currentPage - 1) * ROWS_PER_PAGE;
             const pageData = tickets.slice(start, start + ROWS_PER_PAGE);
@@ -165,6 +173,7 @@
             renderPagination(tickets.length);
         }
 
+        // Render ticket rows
         function renderTickets(tickets) {
             const table = document.getElementById("ticketTable");
             table.innerHTML = "";
@@ -191,6 +200,7 @@
             });
         }
 
+        // Render pagination buttons
         function renderPagination(totalRows) {
             const pagination = document.getElementById("pagination");
             const pageCount = Math.ceil(totalRows / ROWS_PER_PAGE);
@@ -207,6 +217,7 @@
             }
         }
 
+        // Assign IT user to ticket
         document.addEventListener("click", async (e) => {
             if (e.target.classList.contains("update-btn")) {
                 const id = e.target.dataset.id;
@@ -217,13 +228,13 @@
             }
         });
 
+        // Load tickets and apply search & filter on load
         document.addEventListener("DOMContentLoaded", () => {
             loadTickets();
             document.getElementById("searchInput").addEventListener("input", applyFilters);
             document.getElementById("statusFilter").addEventListener("change", applyFilters);
         });
     </script>
-
 
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -234,7 +245,7 @@
                 const tickets = res.data.tickets;
                 const itUsers = res.data.itUsers;
 
-                // 1. Donut Chart - تعداد تیکت‌های هر کارشناس
+                // 1. Donut Chart 
                 const ticketCountByUser = {};
                 tickets.forEach(t => {
                     if (t.assignedTo !== "هنوز ارجاع نشده") {
@@ -265,7 +276,7 @@
                     }
                 });
 
-                // 2. Bar Chart - تعداد تیکت‌ها برای هر وضعیت به ازای هر کارشناس
+                // 2. Bar Chart 
                 const statusTypes = ["در انتظار بررسی", "در حال انجام", "انجام شده", "باطل شده"];
                 const userStatusCounts = {};
 
@@ -311,6 +322,38 @@
             }
         });
     </script>
+
+
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        // Generate full report of current tickets in PDF format
+        async function generatePDF() {
+            const originalTickets = [...allTickets];
+            const originalPage = currentPage;
+
+            // Render all tickets before export
+            renderTickets(allTickets);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const element = document.getElementById("report-content");
+                    const opt = {
+            margin:       0.3,
+            filename:     'ticket-report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, scrollY: 0 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak:    { mode: ['css', 'legacy'] }  
+        };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                currentPage = originalPage;
+                applyFilters();
+            });
+        }
+    </script>
+}
 
 
 }
