@@ -28,7 +28,7 @@
         <!-- Status Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">در حال بررسی</h3>
+                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
                 <p id="pending-count" class="text-2xl font-bold">۰</p>
             </div>
             <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
@@ -53,6 +53,7 @@
                     <thead class="bg-gray-100 text-gray-700">
                         <tr>
                             <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">کاربر</th>
                             <th class="px-4 py-2">عنوان</th>
                             <th class="px-4 py-2">توضیح</th>
                             <th class="px-4 py-2">اولویت</th>
@@ -96,7 +97,7 @@
 
                 data.forEach((item, index) => {
                     switch (item.status) {
-                        case "در حال بررسی": pending++; break;
+                        case "در انتظار بررسی": pending++; break;
                         case "در حال انجام": inprogress++; break;
                         case "انجام شده": done++; break;
                         case "باطل شده": canceled++; break;
@@ -105,6 +106,7 @@
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td class="border px-4 py-2">${index + 1}</td>
+                        <td class="border px-4 py-2">${item.userName}</td>
                         <td class="border px-4 py-2">${item.title}</td>
                         <td class="border px-4 py-2">${item.description}</td>
                         <td class="border px-4 py-2">${item.priority}</td>
@@ -114,7 +116,7 @@
                         <td class="border px-4 py-2">${item.status}</td>
                         <td class="border px-4 py-2">
                             <select data-id="${item.id}" class="statusUpdate border rounded p-1 text-sm">
-                                <option>در حال بررسی</option>
+                                <option>در انتظار بررسی</option>
                                 <option>در حال انجام</option>
                                 <option>انجام شده</option>
                                 <option>باطل شده</option>
