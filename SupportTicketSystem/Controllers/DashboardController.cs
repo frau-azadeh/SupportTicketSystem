@@ -38,14 +38,14 @@ namespace SupportTicketSystem.Api
                     t.Id,
                     t.Title,
                     UserName = t.CreatedByUser.FullName,
-                    Status = t.Status ?? "در حال بررسی",
+                    Status = t.Status ?? "در انتظار بررسی",
                     AssignedTo = t.AssignedToUser != null ? t.AssignedToUser.FullName : "هنوز ارجاع نشده",
                     AssignedToId = t.AssignedToUserId
                 }),
                 itUsers,
                 summary = new
                 {
-                    pending = tickets.Count(t => t.Status == null || t.Status == "در حال بررسی"),
+                    pending = tickets.Count(t => t.Status == null || t.Status == "در انتظار بررسی"),
                     inprogress = tickets.Count(t => t.Status == "در حال انجام"),
                     done = tickets.Count(t => t.Status == "انجام شده"),
                     canceled = tickets.Count(t => t.Status == "باطل شده")
@@ -73,6 +73,7 @@ namespace SupportTicketSystem.Api
                 t.Description,
                 t.Priority,
                 t.Status,
+                UserName = t.CreatedByUser.FullName,
                 FileUrl = !string.IsNullOrEmpty(t.AttachmentPath)
                     ? $"/uploads/{t.AttachmentPath}"
                     : null
