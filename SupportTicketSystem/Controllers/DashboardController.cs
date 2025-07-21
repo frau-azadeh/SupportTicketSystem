@@ -117,7 +117,7 @@ namespace SupportTicketSystem.Api
 
             ticket.Status = dto.Status;
 
-            // ساخت نوتیف برای کاربر ایجاد کننده
+            // add notification for user
             var notif = new Notification
             {
                 TicketId = ticket.Id,
@@ -148,18 +148,18 @@ namespace SupportTicketSystem.Api
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetChartData()
         {
-            // گرفتن لیست کاربران IT
+            // get user it 
             var itUsers = await _context.Users
                 .Where(u => u.Role == "IT")
                 .ToListAsync();
 
-            // گرفتن تمام تیکت‌هایی که به کارشناسان IT ارجاع داده شده‌اند
+            // asign to it
             var tickets = await _context.Tickets
                 .Include(t => t.AssignedToUser)
                 .Where(t => t.AssignedToUserId != null)
                 .ToListAsync();
 
-            // گروه‌بندی تیکت‌ها بر اساس کارشناس برای نمودار دونات
+            // donat
             var donutData = tickets
                 .GroupBy(t => t.AssignedToUser!.FullName)
                 .Select(g => new
@@ -169,7 +169,7 @@ namespace SupportTicketSystem.Api
                 })
                 .ToList();
 
-            // داده‌ها برای نمودار bar: هر وضعیت برای هر کارشناس
+            // bar
             var barData = itUsers.Select(user =>
             {
                 var userTickets = tickets.Where(t => t.AssignedToUserId == user.Id);
@@ -192,7 +192,7 @@ namespace SupportTicketSystem.Api
 
 
 
-        // 4. API: Get Notifications for Logged-in User
+        //  API: Get Notifications for Logged-in User
         [HttpGet("/api/notifications")]
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> GetMyNotifications()
