@@ -28,6 +28,25 @@
 
     <!-- Main content -->
     <main class="flex-1 p-4 md:p-6 grid grid-cols-1">
+        <!--chart-->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow p-4 ">
+                <h3 class="text-lg font-semibold mb-3 text-center">توزیع کارها بین کارشناسان</h3>
+                <div class="w-full">
+                    <canvas id="donutChart" class="w-full h-[300px]"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-4 ">
+                <h3 class="text-lg font-semibold mb-3 text-center">وضعیت‌ کارها برای هر کارشناس</h3>
+                <div class="w-full">
+                    <canvas id="barChart" class="w-full h-[300px]"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+
+
         <!-- Status Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow ">
@@ -204,4 +223,95 @@
             document.getElementById("statusFilter").addEventListener("change", applyFilters);
         });
     </script>
+    <canvas id="donutChart"></canvas>
+    <canvas id="barChart"></canvas>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const res = await axios.get("/api/dashboard/admin");
+                const tickets = res.data.tickets;
+                const itUsers = res.data.itUsers;
+
+                // 1. Donut Chart - تعداد تیکت‌های هر کارشناس
+                const ticketCountByUser = {};
+                tickets.forEach(t => {
+                    if (t.assignedTo !== "هنوز ارجاع نشده") {
+                        ticketCountByUser[t.assignedTo] = (ticketCountByUser[t.assignedTo] || 0) + 1;
+                    }
+                });
+
+                const donutLabels = Object.keys(ticketCountByUser);
+                const donutValues = Object.values(ticketCountByUser);
+
+                new Chart(document.getElementById("donutChart"), {
+                    type: 'doughnut',
+                    data: {
+                        labels: donutLabels,
+                        datasets: [{
+                            data: donutValues,
+                            backgroundColor: [
+                                '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // 2. Bar Chart - تعداد تیکت‌ها برای هر وضعیت به ازای هر کارشناس
+                const statusTypes = ["در انتظار بررسی", "در حال انجام", "انجام شده", "باطل شده"];
+                const userStatusCounts = {};
+
+                itUsers.forEach(u => {
+                    userStatusCounts[u.fullName] = { "در انتظار بررسی": 0, "در حال انجام": 0, "انجام شده": 0, "باطل شده": 0 };
+                });
+
+                tickets.forEach(t => {
+                    if (t.assignedTo !== "هنوز ارجاع نشده") {
+                        const status = t.status ?? "در انتظار بررسی";
+                        userStatusCounts[t.assignedTo][status] += 1;
+                    }
+                });
+
+                const barLabels = Object.keys(userStatusCounts);
+                const barDatasets = statusTypes.map((status, i) => ({
+                    label: status,
+                    data: barLabels.map(user => userStatusCounts[user][status]),
+                    backgroundColor: ['#facc15', '#3b82f6', '#10b981', '#ef4444'][i]
+                }));
+
+                new Chart(document.getElementById("barChart"), {
+                    type: 'bar',
+                    data: {
+                        labels: barLabels,
+                        datasets: barDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true, beginAtZero: true }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error loading chart data:", error);
+            }
+        });
+    </script>
+
+
 }
