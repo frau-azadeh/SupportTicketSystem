@@ -48,24 +48,8 @@
 
 
         <!-- Status Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow ">
-                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
-                <p id="pending-count" class="text-2xl font-bold">0</p>
-            </div>
-            <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">در حال انجام</h3>
-                <p id="inprogress-count" class="text-2xl font-bold">0</p>
-            </div>
-            <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">انجام شده</h3>
-                <p id="done-count" class="text-2xl font-bold">0</p>
-            </div>
-            <div class="bg-red-100 border border-red-300 text-red-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">باطل شده</h3>
-                <p id="canceled-count" class="text-2xl font-bold">0</p>
-            </div>
-        </div>
+        <div id="status-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+
 
         <!-- Ticket Table -->
         <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
@@ -86,64 +70,64 @@
 
             <div id="report-content" class="w-100" ">
                 <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
-                <thead class="bg-gray-100 text-gray-700 rounded-md">
-                    <tr>
-                        <th class="px-4 py-2">#</th>
-                        <th class="px-4 py-2">کاربر</th>
-                        <th class="px-4 py-2">عنوان</th>
-                        <th class="px-4 py-2">وضعیت</th>
-                        <th class="px-4 py-2">ارجاع به</th>
-                        <th class="px-4 py-2">عملیات</th>
-                    </tr>
-                </thead>
-                <tbody id="ticketTable" class="text-gray-800">
-                    <!-- Paginated Rows -->
-                </tbody>
-            </table>
-            
-            <!-- Pagination Controls -->
-            <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
+                    <thead class="bg-gray-100 text-gray-700 rounded-md">
+                        <tr>
+                            <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">کاربر</th>
+                            <th class="px-4 py-2">عنوان</th>
+                            <th class="px-4 py-2">وضعیت</th>
+                            <th class="px-4 py-2">ارجاع به</th>
+                            <th class="px-4 py-2">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketTable" class="text-gray-800">
+                        <!-- Paginated Rows -->
+                    </tbody>
+                </table>
+
+                <!-- Pagination Controls -->
+                <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
             </div>
         </div>
     </main>
 </div>
 
 
+
 @section Scripts {
-    <script>
-        // Sidebar toggle functionality for mobile
-     
+    <script type="module">
+        import { renderStatusCards } from '/js/statusCards.js';
+
         const ROWS_PER_PAGE = 10;
         let allTickets = [];
         let itUsers = [];
         let currentPage = 1;
 
-        
-
-        // Load tickets from API
-        async function loadTickets() {
+        async function loadDashboard() {
             try {
-                const res = await axios.get("/api/dashboard/admin");
-                const { tickets, summary } = res.data;
-                itUsers = res.data.itUsers;
+                const res = await axios.get('/api/dashboard/admin');
+                const { tickets, summary, itUsers: users } = res.data;
+
+                // وضعیت‌ها
+                renderStatusCards("status-cards", summary);
+
+                // ذخیره داده‌ها
                 allTickets = tickets;
+                itUsers = users;
                 currentPage = 1;
-                updateCounts(summary);
+
+                renderCharts(tickets, itUsers);
                 applyFilters();
+
+                // فیلترها
+                document.getElementById("searchInput").addEventListener("input", applyFilters);
+                document.getElementById("statusFilter").addEventListener("change", applyFilters);
             } catch (err) {
-                console.error("Error loading tickets:", err);
+                console.error("خطا در دریافت داده‌ها:", err);
             }
         }
 
-        // Update status count cards
-        function updateCounts(summary) {
-            document.getElementById("pending-count").textContent = summary.pending;
-            document.getElementById("inprogress-count").textContent = summary.inprogress;
-            document.getElementById("done-count").textContent = summary.done;
-            document.getElementById("canceled-count").textContent = summary.canceled;
-        }
-
-        // Apply filters to tickets
+        // رندر جدول با فیلترها
         function applyFilters() {
             const search = document.getElementById("searchInput").value.trim().toLowerCase();
             const status = document.getElementById("statusFilter").value;
@@ -155,7 +139,6 @@
             renderPaginated(filtered);
         }
 
-        // Render paginated table
         function renderPaginated(tickets) {
             const start = (currentPage - 1) * ROWS_PER_PAGE;
             const pageData = tickets.slice(start, start + ROWS_PER_PAGE);
@@ -163,7 +146,6 @@
             renderPagination(tickets.length);
         }
 
-        // Render ticket rows
         function renderTickets(tickets) {
             const table = document.getElementById("ticketTable");
             table.innerHTML = "";
@@ -190,7 +172,6 @@
             });
         }
 
-        // Render pagination buttons
         function renderPagination(totalRows) {
             const pagination = document.getElementById("pagination");
             const pageCount = Math.ceil(totalRows / ROWS_PER_PAGE);
@@ -207,143 +188,54 @@
             }
         }
 
-        // Assign IT user to ticket
         document.addEventListener("click", async (e) => {
             if (e.target.classList.contains("update-btn")) {
                 const id = e.target.dataset.id;
                 const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
                 const userId = dropdown.value;
                 await axios.post(`/api/dashboard/assign/${id}`, { userId });
-                await loadTickets();
+                await loadDashboard(); // reload everything after update
             }
         });
 
-        // Load tickets and apply search & filter on load
-        document.addEventListener("DOMContentLoaded", () => {
-            loadTickets();
-            document.getElementById("searchInput").addEventListener("input", applyFilters);
-            document.getElementById("statusFilter").addEventListener("change", applyFilters);
-        });
-    </script>
+        // نمودارها
+        import { renderCharts } from '/js/chartRender.js';
 
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                const res = await axios.get("/api/dashboard/admin");
-                const tickets = res.data.tickets;
-                const itUsers = res.data.itUsers;
-
-                // 1. Donut Chart 
-                const ticketCountByUser = {};
-                tickets.forEach(t => {
-                    if (t.assignedTo !== "هنوز ارجاع نشده") {
-                        ticketCountByUser[t.assignedTo] = (ticketCountByUser[t.assignedTo] || 0) + 1;
-                    }
-                });
-
-                const donutLabels = Object.keys(ticketCountByUser);
-                const donutValues = Object.values(ticketCountByUser);
-
-                new Chart(document.getElementById("donutChart"), {
-                    type: 'doughnut',
-                    data: {
-                        labels: donutLabels,
-                        datasets: [{
-                            data: donutValues,
-                            backgroundColor: [
-                                '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-
-                // 2. Bar Chart 
-                const statusTypes = ["در انتظار بررسی", "در حال انجام", "انجام شده", "باطل شده"];
-                const userStatusCounts = {};
-
-                itUsers.forEach(u => {
-                    userStatusCounts[u.fullName] = { "در انتظار بررسی": 0, "در حال انجام": 0, "انجام شده": 0, "باطل شده": 0 };
-                });
-
-                tickets.forEach(t => {
-                    if (t.assignedTo !== "هنوز ارجاع نشده") {
-                        const status = t.status ?? "در انتظار بررسی";
-                        userStatusCounts[t.assignedTo][status] += 1;
-                    }
-                });
-
-                const barLabels = Object.keys(userStatusCounts);
-                const barDatasets = statusTypes.map((status, i) => ({
-                    label: status,
-                    data: barLabels.map(user => userStatusCounts[user][status]),
-                    backgroundColor: ['#facc15', '#3b82f6', '#10b981', '#ef4444'][i]
-                }));
-
-                new Chart(document.getElementById("barChart"), {
-                    type: 'bar',
-                    data: {
-                        labels: barLabels,
-                        datasets: barDatasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'top' }
-                        },
-                        scales: {
-                            x: { stacked: true },
-                            y: { stacked: true, beginAtZero: true }
-                        }
-                    }
-                });
-
-            } catch (error) {
-                console.error("Error loading chart data:", error);
-            }
-        });
-    </script>
-
-
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script>
-        // Generate full report of current tickets in PDF format
+        // PDF
         async function generatePDF() {
             const originalTickets = [...allTickets];
             const originalPage = currentPage;
 
-            // Render all tickets before export
             renderTickets(allTickets);
             await new Promise(resolve => setTimeout(resolve, 300));
 
             const element = document.getElementById("report-content");
-                    const opt = {
-            margin:       0.3,
-            filename:     'ticket-report.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, scrollY: 0 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['css', 'legacy'] }  
-        };
+            const opt = {
+                margin: 0.3,
+                filename: 'ticket-report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
 
             html2pdf().set(opt).from(element).save().then(() => {
                 currentPage = originalPage;
                 applyFilters();
             });
         }
+
+        // شروع
+        document.addEventListener("DOMContentLoaded", loadDashboard);
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="~/js/sidebar.js"></script>
+}
+
+
 }
 
 
