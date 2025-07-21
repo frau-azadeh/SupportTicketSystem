@@ -97,6 +97,7 @@
             overlay.classList.add("hidden");
         });
 
+        // Load tickets from API and render table
         async function loadTickets() {
             try {
                 const res = await axios.get("/api/dashboard/admin");
@@ -104,12 +105,13 @@
                 const table = document.getElementById("ticketTable");
                 table.innerHTML = "";
 
-                // Update counts
+                // Update status counts
                 document.getElementById("pending-count").textContent = summary.pending;
                 document.getElementById("inprogress-count").textContent = summary.inprogress;
                 document.getElementById("done-count").textContent = summary.done;
                 document.getElementById("canceled-count").textContent = summary.canceled;
 
+                // Render each ticket row
                 tickets.forEach((item, index) => {
                     const row = document.createElement("tr");
                     row.innerHTML = `
@@ -131,24 +133,48 @@
                     `;
                     table.appendChild(row);
                 });
+
+                // Trigger filtering after data loads
+                document.getElementById("searchInput").dispatchEvent(new Event("input"));
             } catch (err) {
                 console.error("خطا در دریافت داده‌ها:", err);
             }
         }
 
+        // Handle click on 'ثبت' button to assign a ticket
         document.addEventListener("click", async (e) => {
             if (e.target.classList.contains("update-btn")) {
                 const id = e.target.dataset.id;
                 const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
                 const userId = dropdown.value;
-                await axios.post("/api/dashboard/assign", {
-                    ticketId: id,
+
+                await axios.post(`/api/dashboard/assign/${id}`, {
                     userId: userId
                 });
+
                 await loadTickets();
             }
         });
 
-        document.addEventListener("DOMContentLoaded", loadTickets);
+        // Filter tickets by user name (live search)
+        document.addEventListener("DOMContentLoaded", () => {
+            loadTickets();
+
+            const searchInput = document.getElementById("searchInput");
+
+            searchInput.addEventListener("input", function () {
+                const searchValue = this.value.trim().toLowerCase();
+
+                // Loop through all table rows
+                document.querySelectorAll("#ticketTable tr").forEach(row => {
+                    const userCell = row.children[1]; // column 
+                    const userName = userCell?.textContent?.toLowerCase() || "";
+
+                    // Show/hide rows based on match
+                    row.style.display = userName.includes(searchValue) ? "" : "none";
+                });
+            });
+        });
     </script>
 }
+
