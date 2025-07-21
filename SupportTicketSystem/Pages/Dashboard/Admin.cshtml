@@ -6,7 +6,6 @@
 }
 
 <div class="min-h-screen flex bg-gray-100 font-vazir">
-
     <!-- Mobile Sidebar Toggle -->
     <div class="md:hidden fixed top-4 right-4 z-50">
         <button id="menuToggle" class="bg-[#1e293b] text-white p-2 rounded-md shadow-md focus:outline-none">
@@ -28,64 +27,75 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden md:hidden"></div>
 
     <!-- Main content -->
-    <main class="flex-1 p-6 transition-all">
-
+    <main class="flex-1 p-4 md:p-6 grid grid-cols-1">
         <!-- Status Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow hover:shadow-md transition">
+        <div class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow ">
                 <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
-                <p id="pending-count" class="text-2xl font-bold">۰</p>
+                <p id="pending-count" class="text-2xl font-bold">0</p>
             </div>
-
-            <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow hover:shadow-md transition">
+            <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
                 <h3 class="text-lg font-semibold mb-1">در حال انجام</h3>
-                <p id="inprogress-count" class="text-2xl font-bold">۰</p>
+                <p id="inprogress-count" class="text-2xl font-bold">0</p>
             </div>
-
-            <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 shadow hover:shadow-md transition">
+            <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 shadow">
                 <h3 class="text-lg font-semibold mb-1">انجام شده</h3>
-                <p id="done-count" class="text-2xl font-bold">۰</p>
+                <p id="done-count" class="text-2xl font-bold">0</p>
             </div>
-
-            <div class="bg-red-100 border border-red-300 text-red-800 rounded-lg p-4 shadow hover:shadow-md transition">
+            <div class="bg-red-100 border border-red-300 text-red-800 rounded-lg p-4 shadow">
                 <h3 class="text-lg font-semibold mb-1">باطل شده</h3>
-                <p id="canceled-count" class="text-2xl font-bold">۰</p>
+                <p id="canceled-count" class="text-2xl font-bold">0</p>
             </div>
         </div>
 
         <!-- Ticket Table -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold">تیکت‌های ثبت‌شده</h2>
-                <input type="text" id="searchInput" placeholder="جستجو..." class="border rounded px-3 py-1 text-sm w-1/3" />
+        <div class="bg-white rounded-lg shadow p-4 overflow-x-auto">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 class="text-xl font-semibold whitespace-nowrap">تیکت‌های ثبت‌شده</h2>
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <input type="text" id="searchInput" placeholder="جستجو بر اساس نام کاربر..." class="border rounded px-3 py-1 text-sm w-full sm:w-auto" />
+                    <select id="statusFilter" class="border rounded px-3 py-1 text-sm w-full sm:w-auto">
+                        <option value="">فیلتر وضعیت</option>
+                        <option>در انتظار بررسی</option>
+                        <option>در حال انجام</option>
+                        <option>انجام شده</option>
+                        <option>باطل شده</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-right border-collapse">
-                    <thead class="bg-gray-100 text-gray-700">
-                        <tr>
-                            <th class="px-4 py-2">#</th>
-                            <th class="px-4 py-2">کاربر</th>
-                            <th class="px-4 py-2">عنوان</th>
-                            <th class="px-4 py-2">وضعیت</th>
-                            <th class="px-4 py-2">ارجاع به</th>
-                            <th class="px-4 py-2">عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ticketTable" class="text-gray-800">
-                        <!-- API Rendered Rows -->
-                    </tbody>
-                </table>
-            </div>
+            <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
+                <thead class="bg-gray-100 text-gray-700 rounded-md">
+                    <tr>
+                        <th class="px-4 py-2">#</th>
+                        <th class="px-4 py-2">کاربر</th>
+                        <th class="px-4 py-2">عنوان</th>
+                        <th class="px-4 py-2">وضعیت</th>
+                        <th class="px-4 py-2">ارجاع به</th>
+                        <th class="px-4 py-2">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketTable" class="text-gray-800">
+                    <!-- Paginated Rows -->
+                </tbody>
+            </table>
+
+            <!-- Pagination Controls -->
+            <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
         </div>
     </main>
 </div>
+
 
 @section Scripts {
     <script>
         const sidebar = document.getElementById("sidebar");
         const toggle = document.getElementById("menuToggle");
         const overlay = document.getElementById("overlay");
+        const ROWS_PER_PAGE = 10;
+        let allTickets = [];
+        let itUsers = [];
+        let currentPage = 1;
 
         toggle?.addEventListener("click", () => {
             sidebar.classList.toggle("-translate-x-full");
@@ -100,39 +110,81 @@
         async function loadTickets() {
             try {
                 const res = await axios.get("/api/dashboard/admin");
-                const { tickets, itUsers, summary } = res.data;
-                const table = document.getElementById("ticketTable");
-                table.innerHTML = "";
-
-                // Update counts
-                document.getElementById("pending-count").textContent = summary.pending;
-                document.getElementById("inprogress-count").textContent = summary.inprogress;
-                document.getElementById("done-count").textContent = summary.done;
-                document.getElementById("canceled-count").textContent = summary.canceled;
-
-                tickets.forEach((item, index) => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td class="border px-4 py-2">${index + 1}</td>
-                        <td class="border px-4 py-2">${item.userName}</td>
-                        <td class="border px-4 py-2">${item.title}</td>
-                        <td class="border px-4 py-2">${item.status}</td>
-                        <td class="border px-4 py-2">
-                            <select class="assign-dropdown border rounded px-2 py-1 text-sm">
-                                <option value="">انتخاب کارشناس</option>
-                                ${itUsers.map(u => `
-                                    <option value="${u.id}" ${u.id === item.assignedToId ? 'selected' : ''}>${u.fullName}</option>
-                                `).join('')}
-                            </select>
-                        </td>
-                        <td class="border px-4 py-2">
-                            <button class="update-btn bg-blue-500 text-white px-3 py-1 rounded text-xs" data-id="${item.id}">ثبت</button>
-                        </td>
-                    `;
-                    table.appendChild(row);
-                });
+                const { tickets, summary } = res.data;
+                itUsers = res.data.itUsers;
+                allTickets = tickets;
+                currentPage = 1;
+                updateCounts(summary);
+                applyFilters();
             } catch (err) {
-                console.error("خطا در دریافت داده‌ها:", err);
+                console.error("Error loading tickets:", err);
+            }
+        }
+
+        function updateCounts(summary) {
+            document.getElementById("pending-count").textContent = summary.pending;
+            document.getElementById("inprogress-count").textContent = summary.inprogress;
+            document.getElementById("done-count").textContent = summary.done;
+            document.getElementById("canceled-count").textContent = summary.canceled;
+        }
+
+        function applyFilters() {
+            const search = document.getElementById("searchInput").value.trim().toLowerCase();
+            const status = document.getElementById("statusFilter").value;
+            const filtered = allTickets.filter(t => {
+                const matchName = t.userName.toLowerCase().includes(search);
+                const matchStatus = !status || t.status === status;
+                return matchName && matchStatus;
+            });
+            renderPaginated(filtered);
+        }
+
+        function renderPaginated(tickets) {
+            const start = (currentPage - 1) * ROWS_PER_PAGE;
+            const pageData = tickets.slice(start, start + ROWS_PER_PAGE);
+            renderTickets(pageData);
+            renderPagination(tickets.length);
+        }
+
+        function renderTickets(tickets) {
+            const table = document.getElementById("ticketTable");
+            table.innerHTML = "";
+            tickets.forEach((item, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="border px-4 py-2">${(currentPage - 1) * ROWS_PER_PAGE + index + 1}</td>
+                    <td class="border px-4 py-2">${item.userName}</td>
+                    <td class="border px-4 py-2">${item.title}</td>
+                    <td class="border px-4 py-2">${item.status}</td>
+                    <td class="border px-4 py-2">
+                        <select class="assign-dropdown border rounded px-2 py-1 text-sm">
+                            <option value="">انتخاب کارشناس</option>
+                            ${itUsers.map(u => `
+                                <option value="${u.id}" ${u.id === item.assignedToId ? 'selected' : ''}>${u.fullName}</option>
+                            `).join('')}
+                        </select>
+                    </td>
+                    <td class="border px-4 py-2">
+                        <button class="update-btn bg-blue-500 text-white px-3 py-1 rounded text-xs" data-id="${item.id}">ثبت</button>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        function renderPagination(totalRows) {
+            const pagination = document.getElementById("pagination");
+            const pageCount = Math.ceil(totalRows / ROWS_PER_PAGE);
+            pagination.innerHTML = "";
+            for (let i = 1; i <= pageCount; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.className = `px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
+                btn.addEventListener("click", () => {
+                    currentPage = i;
+                    applyFilters();
+                });
+                pagination.appendChild(btn);
             }
         }
 
@@ -141,14 +193,15 @@
                 const id = e.target.dataset.id;
                 const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
                 const userId = dropdown.value;
-                await axios.post("/api/dashboard/assign", {
-                    ticketId: id,
-                    userId: userId
-                });
+                await axios.post(`/api/dashboard/assign/${id}`, { userId });
                 await loadTickets();
             }
         });
 
-        document.addEventListener("DOMContentLoaded", loadTickets);
+        document.addEventListener("DOMContentLoaded", () => {
+            loadTickets();
+            document.getElementById("searchInput").addEventListener("input", applyFilters);
+            document.getElementById("statusFilter").addEventListener("change", applyFilters);
+        });
     </script>
 }

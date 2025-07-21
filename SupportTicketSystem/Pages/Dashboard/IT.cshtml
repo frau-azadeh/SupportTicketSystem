@@ -13,7 +13,7 @@
 
     <!-- Sidebar -->
     <aside id="sidebar" class="bg-[#1e293b] text-white w-64 p-6 space-y-4 transform md:translate-x-0 -translate-x-full fixed md:relative top-0 left-0 h-full md:h-auto z-40 transition-transform duration-300 ease-in-out rounded-r-xl shadow-2xl">
-        <h2 class="text-xl font-bold border-b border-gray-600 pb-4 mb-4">پنل IT</h2>
+        <h2 class="text-xl font-bold border-b border-gray-600 pb-4 mb-4">@Model.DisplayName</h2>
         <nav class="flex-1 space-y-2 text-sm font-medium">
             <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">📥 درخواست‌ها</a>
             <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">📊 آمار</a>
@@ -28,7 +28,7 @@
         <!-- Status Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">در حال بررسی</h3>
+                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
                 <p id="pending-count" class="text-2xl font-bold">۰</p>
             </div>
             <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
@@ -53,6 +53,7 @@
                     <thead class="bg-gray-100 text-gray-700">
                         <tr>
                             <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">کاربر</th>
                             <th class="px-4 py-2">عنوان</th>
                             <th class="px-4 py-2">توضیح</th>
                             <th class="px-4 py-2">اولویت</th>
@@ -62,9 +63,11 @@
                         </tr>
                     </thead>
                     <tbody id="ticketTable" class="text-gray-800">
-                        <!-- با API پر میشه -->
+                        <!-- Paginated Rows -->
                     </tbody>
                 </table>
+                <!-- Pagination Controls -->
+                <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
             </div>
         </div>
     </main>
@@ -86,61 +89,107 @@
             overlay.classList.add("hidden");
         });
 
-        // API Data
+        // Constants
+        const ROWS_PER_PAGE = 10;
+        let currentPage = 1;
+        let allTickets = [];
+
+        function paginateData(data, page) {
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            return data.slice(start, end);
+        }
+
+        function renderPagination(totalItems) {
+            const pageCount = Math.ceil(totalItems / ROWS_PER_PAGE);
+            const pagination = document.getElementById("pagination");
+            pagination.innerHTML = "";
+
+            for (let i = 1; i <= pageCount; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.className = `px-3 py-1 border rounded mx-1 mb-1 ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
+                btn.addEventListener("click", () => {
+                    currentPage = i;
+                    renderTable();
+                });
+                pagination.appendChild(btn);
+            }
+        }
+
+        function renderTable() {
+            const table = document.getElementById("ticketTable");
+            table.innerHTML = "";
+
+            const paginated = paginateData(allTickets, currentPage);
+
+            paginated.forEach((item, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="border px-4 py-2">${(currentPage - 1) * ROWS_PER_PAGE + index + 1}</td>
+                    <td class="border px-4 py-2">${item.userName}</td>
+                    <td class="border px-4 py-2">${item.title}</td>
+                    <td class="border px-4 py-2">${item.description}</td>
+                    <td class="border px-4 py-2">${item.priority}</td>
+                    <td class="border px-4 py-2">
+                        ${item.fileUrl ? `<a href="${item.fileUrl}" class="text-blue-600 underline" target="_blank">دانلود</a>` : '—'}
+                    </td>
+                    <td class="border px-4 py-2">${item.status}</td>
+                    <td class="border px-4 py-2">
+                        <select data-id="${item.id}" class="statusUpdate border rounded p-1 text-sm">
+                            <option>در انتظار بررسی</option>
+                            <option>در حال انجام</option>
+                            <option>انجام شده</option>
+                            <option>باطل شده</option>
+                        </select>
+                    </td>
+                `;
+                table.appendChild(row);
+            });
+
+            // Set default values on dropdown
+            document.querySelectorAll(".statusUpdate").forEach(select => {
+                const statusCell = select.closest("tr").children[6];
+                select.value = statusCell.textContent.trim();
+
+                select.addEventListener("change", (e) => {
+                    const id = select.dataset.id;
+                    const newStatus = e.target.value;
+                    axios.put(`/api/tickets/${id}/status`, { status: newStatus })
+                        .then(() => {
+                            const ticket = allTickets.find(t => t.id == id);
+                            if (ticket) ticket.status = newStatus;
+                            renderStatusCards();
+                            renderTable(); // re-render to reflect status change
+                        })
+                        .catch(() => alert("خطا در تغییر وضعیت"));
+                });
+            });
+        }
+
+        function renderStatusCards() {
+            const statusCount = { "در انتظار بررسی": 0, "در حال انجام": 0, "انجام شده": 0, "باطل شده": 0 };
+            allTickets.forEach(t => {
+                const status = t.status || "در انتظار بررسی";
+                if (statusCount[status] !== undefined) statusCount[status]++;
+            });
+
+            document.getElementById("pending-count").textContent = statusCount["در انتظار بررسی"];
+            document.getElementById("inprogress-count").textContent = statusCount["در حال انجام"];
+            document.getElementById("done-count").textContent = statusCount["انجام شده"];
+            document.getElementById("canceled-count").textContent = statusCount["باطل شده"];
+        }
+
+        // Load data
         document.addEventListener("DOMContentLoaded", () => {
             axios.get("/api/dashboard/it").then(res => {
-                const data = res.data;
-                const table = document.getElementById("ticketTable");
-                let pending = 0, inprogress = 0, done = 0, canceled = 0;
-                table.innerHTML = "";
-
-                data.forEach((item, index) => {
-                    switch (item.status) {
-                        case "در حال بررسی": pending++; break;
-                        case "در حال انجام": inprogress++; break;
-                        case "انجام شده": done++; break;
-                        case "باطل شده": canceled++; break;
-                    }
-
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td class="border px-4 py-2">${index + 1}</td>
-                        <td class="border px-4 py-2">${item.title}</td>
-                        <td class="border px-4 py-2">${item.description}</td>
-                        <td class="border px-4 py-2">${item.priority}</td>
-                        <td class="border px-4 py-2">
-                            ${item.fileUrl ? `<a href="${item.fileUrl}" class="text-blue-600 underline" target="_blank">دانلود</a>` : '—'}
-                        </td>
-                        <td class="border px-4 py-2">${item.status}</td>
-                        <td class="border px-4 py-2">
-                            <select data-id="${item.id}" class="statusUpdate border rounded p-1 text-sm">
-                                <option>در حال بررسی</option>
-                                <option>در حال انجام</option>
-                                <option>انجام شده</option>
-                                <option>باطل شده</option>
-                            </select>
-                        </td>
-                    `;
-                    table.appendChild(row);
-                });
-
-                document.getElementById("pending-count").textContent = pending;
-                document.getElementById("inprogress-count").textContent = inprogress;
-                document.getElementById("done-count").textContent = done;
-                document.getElementById("canceled-count").textContent = canceled;
-
-                // Update status on change
-                document.querySelectorAll(".statusUpdate").forEach(select => {
-                    select.value = select.closest("tr").children[5].textContent.trim();
-                    select.addEventListener("change", (e) => {
-                        const id = select.dataset.id;
-                        const newStatus = e.target.value;
-                        axios.put(`/api/tickets/${id}/status`, { status: newStatus })
-                            .then(() => location.reload())
-                            .catch(err => alert("خطا در تغییر وضعیت"));
-                    });
-                });
+                allTickets = res.data;
+                renderStatusCards();
+                renderPagination(allTickets.length);
+                renderTable();
             });
         });
     </script>
+}
+
 }

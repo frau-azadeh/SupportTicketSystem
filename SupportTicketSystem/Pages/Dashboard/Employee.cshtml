@@ -15,7 +15,7 @@
 
     <!-- Sidebar -->
     <aside id="sidebar" class="bg-[#1e293b] text-white w-64 flex-shrink-0 p-6 space-y-4 transform md:translate-x-0 -translate-x-full fixed md:relative md:top-0 top-0 left-0 h-full md:h-auto z-40 transition-transform duration-300 ease-in-out rounded-r-xl shadow-2xl">
-        <h2 class="text-xl font-bold border-b border-gray-600 pb-4 mb-4">پنل کاربر</h2>
+        <h2 class="text-xl font-bold border-b border-gray-600 pb-4 mb-4">@Model.DisplayName</h2>
         <nav class="flex-1 space-y-2 text-sm font-medium">
             <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">ارسال تیکت</a>
             <a href="#" class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-800">تاریخچه</a>
@@ -77,7 +77,9 @@
             {
                 <div class="text-gray-500 text-sm">هنوز تیکتی ارسال نکرده‌اید.</div>
             }
+            <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
         </div>
+        
 
 
         <div class="bg-white rounded-lg shadow p-6  mx-auto">
@@ -209,6 +211,52 @@
             }
         });
     </script>
+    <script>
+        const ROWS_PER_PAGE = 10;
+        let currentPage = 1;
+        let ticketRows = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const tableBody = document.getElementById("ticket-list");
+            ticketRows = Array.from(tableBody.querySelectorAll("tr"));
+
+            renderTablePage();
+            renderPagination();
+        });
+
+        function renderTablePage() {
+            const tableBody = document.getElementById("ticket-list");
+            tableBody.innerHTML = "";
+
+            const start = (currentPage - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const rowsToShow = ticketRows.slice(start, end);
+
+            rowsToShow.forEach(row => {
+                tableBody.appendChild(row);
+            });
+        }
+
+        function renderPagination() {
+            const pageCount = Math.ceil(ticketRows.length / ROWS_PER_PAGE);
+            const pagination = document.getElementById("pagination");
+            pagination.innerHTML = "";
+
+            for (let i = 1; i <= pageCount; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.className = `px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
+                btn.addEventListener("click", () => {
+                    currentPage = i;
+                    renderTablePage();
+                    renderPagination();
+                });
+                pagination.appendChild(btn);
+            }
+        }
+    </script>
+
+
 
 
 }
