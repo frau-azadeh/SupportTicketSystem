@@ -13,7 +13,7 @@ namespace SupportTicketSystem.Models
         public string SenderName { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
 
-        // 👇 این خط جدید رو اضافه کن
+     
         [ForeignKey("UserId")]
         public User? User { get; set; }
     }
