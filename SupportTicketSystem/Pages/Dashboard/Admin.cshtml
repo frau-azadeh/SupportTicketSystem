@@ -111,7 +111,14 @@
 
 @section Scripts {
     <script>
+        // Sidebar toggle functionality for mobile
+     
+        const ROWS_PER_PAGE = 10;
+        let allTickets = [];
+        let itUsers = [];
+        let currentPage = 1;
 
+        
 
         // Load tickets from API
         async function loadTickets() {
@@ -337,5 +344,6 @@
         }
     </script>
     <script src="~/js/sidebar.js"></script>
-
 }
+
+
