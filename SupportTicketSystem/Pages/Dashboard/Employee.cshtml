@@ -77,7 +77,9 @@
             {
                 <div class="text-gray-500 text-sm">هنوز تیکتی ارسال نکرده‌اید.</div>
             }
+            <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
         </div>
+        
 
 
         <div class="bg-white rounded-lg shadow p-6  mx-auto">
@@ -209,6 +211,52 @@
             }
         });
     </script>
+    <script>
+        const ROWS_PER_PAGE = 10;
+        let currentPage = 1;
+        let ticketRows = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const tableBody = document.getElementById("ticket-list");
+            ticketRows = Array.from(tableBody.querySelectorAll("tr"));
+
+            renderTablePage();
+            renderPagination();
+        });
+
+        function renderTablePage() {
+            const tableBody = document.getElementById("ticket-list");
+            tableBody.innerHTML = "";
+
+            const start = (currentPage - 1) * ROWS_PER_PAGE;
+            const end = start + ROWS_PER_PAGE;
+            const rowsToShow = ticketRows.slice(start, end);
+
+            rowsToShow.forEach(row => {
+                tableBody.appendChild(row);
+            });
+        }
+
+        function renderPagination() {
+            const pageCount = Math.ceil(ticketRows.length / ROWS_PER_PAGE);
+            const pagination = document.getElementById("pagination");
+            pagination.innerHTML = "";
+
+            for (let i = 1; i <= pageCount; i++) {
+                const btn = document.createElement("button");
+                btn.textContent = i;
+                btn.className = `px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
+                btn.addEventListener("click", () => {
+                    currentPage = i;
+                    renderTablePage();
+                    renderPagination();
+                });
+                pagination.appendChild(btn);
+            }
+        }
+    </script>
+
+
 
 
 }
