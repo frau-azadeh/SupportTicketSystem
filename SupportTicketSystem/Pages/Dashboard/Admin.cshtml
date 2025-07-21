@@ -27,10 +27,10 @@
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden md:hidden"></div>
 
     <!-- Main content -->
-    <main class="flex-1 p-4 md:p-6">
+    <main class="flex-1 p-4 md:p-6 grid grid-cols-1">
         <!-- Status Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow">
+        <div class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow ">
                 <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
                 <p id="pending-count" class="text-2xl font-bold">0</p>
             </div>
@@ -64,8 +64,8 @@
                 </div>
             </div>
 
-            <table class="w-full text-sm text-right border-collapse min-w-[600px]">
-                <thead class="bg-gray-100 text-gray-700">
+            <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
+                <thead class="bg-gray-100 text-gray-700 rounded-md">
                     <tr>
                         <th class="px-4 py-2">#</th>
                         <th class="px-4 py-2">کاربر</th>
