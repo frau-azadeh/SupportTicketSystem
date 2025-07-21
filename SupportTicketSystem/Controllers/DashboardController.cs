@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SupportTicketSystem.Data;
+using SupportTicketSystem.Models;
 
 namespace SupportTicketSystem.Api
 {
@@ -98,6 +99,7 @@ namespace SupportTicketSystem.Api
             return Ok(new { message = "تیکت با موفقیت ارجاع داده شد" });
         }
 
+
         [HttpPut("/api/tickets/{id}/status")]
         [Authorize(Roles = "IT")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusDto dto)
@@ -105,17 +107,38 @@ namespace SupportTicketSystem.Api
             var userId = int.Parse(User.FindFirst("UserId")!.Value);
 
             var ticket = await _context.Tickets
-                .Where(t => t.AssignedToUserId == userId && t.Id == id)
-                .FirstOrDefaultAsync();
+                .Include(t => t.CreatedByUser)
+                .Include(t => t.AssignedToUser)
+                .FirstOrDefaultAsync(t => t.AssignedToUserId == userId && t.Id == id);
 
             if (ticket == null)
                 return NotFound("تیکت یافت نشد یا اجازه دسترسی ندارید.");
 
+            bool wasDoneBefore = ticket.Status == "انجام شده";
+
             ticket.Status = dto.Status;
+
+            // when new ticket change status, send notification
+            if (dto.Status == "انجام شده" && !wasDoneBefore)
+            {
+                var notif = new Notification
+                {
+                    TicketId = ticket.Id,
+                    UserId = ticket.CreatedByUserId,
+                    Message = $"تیکت شما با عنوان «{ticket.Title}» توسط کارشناس «{ticket.AssignedToUser?.FullName}» انجام شد.",
+                    SenderName = ticket.AssignedToUser?.FullName ?? "کارشناس",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                };
+
+                _context.Notifications.Add(notif);
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "وضعیت با موفقیت به‌روزرسانی شد." });
         }
+
 
         public class AssignDto
         {
@@ -126,5 +149,73 @@ namespace SupportTicketSystem.Api
         {
             public string Status { get; set; } = string.Empty;
         }
+
+        [HttpGet("admin/charts")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetChartData()
+        {
+            // get user it 
+            var itUsers = await _context.Users
+                .Where(u => u.Role == "IT")
+                .ToListAsync();
+
+            // asign to it
+            var tickets = await _context.Tickets
+                .Include(t => t.AssignedToUser)
+                .Where(t => t.AssignedToUserId != null)
+                .ToListAsync();
+
+            // donat
+            var donutData = tickets
+                .GroupBy(t => t.AssignedToUser!.FullName)
+                .Select(g => new
+                {
+                    user = g.Key,
+                    count = g.Count()
+                })
+                .ToList();
+
+            // bar
+            var barData = itUsers.Select(user =>
+            {
+                var userTickets = tickets.Where(t => t.AssignedToUserId == user.Id);
+                return new
+                {
+                    user = user.FullName,
+                    pending = userTickets.Count(t => t.Status == null || t.Status == "در انتظار بررسی"),
+                    inprogress = userTickets.Count(t => t.Status == "در حال انجام"),
+                    done = userTickets.Count(t => t.Status == "انجام شده"),
+                    canceled = userTickets.Count(t => t.Status == "باطل شده")
+                };
+            }).ToList();
+
+            return Ok(new
+            {
+                donut = donutData,
+                bar = barData
+            });
+        }
+
+
+
+        //  API: Get Notifications for Logged-in User
+        [HttpGet("/api/notifications")]
+        [Authorize(Roles = "Employee")]
+        public async Task<IActionResult> GetMyNotifications()
+        {
+            var userId = int.Parse(User.FindFirst("UserId")!.Value);
+
+            var notifications = await _context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead) // not read
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(10)
+                .ToListAsync();
+
+            notifications.ForEach(n => n.IsRead = true);// assign to read
+            await _context.SaveChangesAsync();
+
+            return Ok(notifications);
+        }
+
     }
 }

@@ -27,7 +27,6 @@
 
     <!-- Main content -->
     <main class="flex-1 p-6">
-
         <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 hidden">
             <div id="toast" class="px-6 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 border border-gray-400 bg-white text-gray-700">
                 <span id="toast-icon"></span>
@@ -70,7 +69,6 @@
                             </tr>
                         }
                     </tbody>
-
                 </table>
             }
             else
@@ -79,12 +77,9 @@
             }
             <div id="pagination" class="flex justify-center mt-4 gap-1 flex-wrap"></div>
         </div>
-        
 
-
-        <div class="bg-white rounded-lg shadow p-6  mx-auto">
+        <div class="bg-white rounded-lg shadow p-6 mx-auto">
             <h2 class="text-2xl font-bold mb-6 text-center">ارسال درخواست پشتیبانی</h2>
-
             <form method="post" enctype="multipart/form-data" class="space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">عنوان</label>
@@ -103,7 +98,6 @@
                         <option value="متوسط">متوسط</option>
                         <option value="زیاد">زیاد</option>
                     </select>
-
                 </div>
 
                 <div>
@@ -111,7 +105,7 @@
                     <input type="file" name="attachment" class="w-full" />
                 </div>
 
-                <button id="submit-btn"  type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
+                <button id="submit-btn" type="button" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition">
                     ارسال درخواست
                 </button>
             </form>
@@ -153,10 +147,10 @@
             }, 3000);
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", async () => {
             const btn = document.getElementById("submit-btn");
             if (btn) {
-                btn.addEventListener("click", function () {
+                btn.addEventListener("click", async function () {
                     const formData = new FormData();
                     const title = document.querySelector('[name="title"]').value;
                     const description = document.querySelector('[name="description"]').value;
@@ -170,14 +164,14 @@
                         formData.append("attachment", fileInput.files[0]);
                     }
 
-                    axios.post('/api/tickets', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                        withCredentials: true
-                    })
-                    .then(res => {
+                    try {
+                        const res = await axios.post('/api/tickets', formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                            withCredentials: true
+                        });
+
                         showToast(res.data?.message || "با موفقیت ثبت شد ✅", true);
 
-                        //without refresh 
                         const now = new Date();
                         const persianDate = now.toLocaleDateString('fa-IR');
 
@@ -192,73 +186,32 @@
                                 ${fileInput.files.length > 0
                                     ? `<span class="text-gray-400">منتشر نشده</span>`
                                     : `<span class="text-gray-400">ندارد</span>`}
-                            </td>
-                        `;
+                            </td>`;
 
                         const tableBody = document.getElementById("ticket-list");
                         if (tableBody) {
                             tableBody.prepend(newRow);
                         }
 
-                        // reset
                         document.querySelector("form").reset();
-                    })
-                    .catch(err => {
+                    } catch (err) {
                         console.error(err);
                         showToast("❌ ارسال تیکت با خطا مواجه شد.", false);
+                    }
+                });
+            }
+
+            // Load Notifications
+            try {
+                const res = await axios.get("/api/notifications", { withCredentials: true });
+                if (res.data && res.data.length > 0) {
+                    res.data.forEach(n => {
+                        showToast(n.message);
                     });
-                });
+                }
+            } catch (err) {
+                console.error("خطا در دریافت نوتیفیکیشن‌ها", err);
             }
         });
     </script>
-    <script>
-        const ROWS_PER_PAGE = 10;
-        let currentPage = 1;
-        let ticketRows = [];
-
-        document.addEventListener("DOMContentLoaded", () => {
-            const tableBody = document.getElementById("ticket-list");
-            ticketRows = Array.from(tableBody.querySelectorAll("tr"));
-
-            renderTablePage();
-            renderPagination();
-        });
-
-        function renderTablePage() {
-            const tableBody = document.getElementById("ticket-list");
-            tableBody.innerHTML = "";
-
-            const start = (currentPage - 1) * ROWS_PER_PAGE;
-            const end = start + ROWS_PER_PAGE;
-            const rowsToShow = ticketRows.slice(start, end);
-
-            rowsToShow.forEach(row => {
-                tableBody.appendChild(row);
-            });
-        }
-
-        function renderPagination() {
-            const pageCount = Math.ceil(ticketRows.length / ROWS_PER_PAGE);
-            const pagination = document.getElementById("pagination");
-            pagination.innerHTML = "";
-
-            for (let i = 1; i <= pageCount; i++) {
-                const btn = document.createElement("button");
-                btn.textContent = i;
-                btn.className = `px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
-                btn.addEventListener("click", () => {
-                    currentPage = i;
-                    renderTablePage();
-                    renderPagination();
-                });
-                pagination.appendChild(btn);
-            }
-        }
-    </script>
-
-
-
-
 }
-
-

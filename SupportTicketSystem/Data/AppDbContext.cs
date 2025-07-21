@@ -10,6 +10,8 @@ namespace SupportTicketSystem.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Ticket> Tickets { get; set; }
 
+        public DbSet<Notification> Notifications { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -27,6 +29,12 @@ namespace SupportTicketSystem.Data
                 .HasForeignKey(t => t.AssignedToUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Notification>()
+               .HasOne(n => n.User)
+               .WithMany()
+               .HasForeignKey(n => n.UserId)
+               .OnDelete(DeleteBehavior.Cascade);
+
             //  (seeding)
             modelBuilder.Entity<User>().HasData(
            new User { Id = 1, FullName = "مدیر سیستم", Username = "admin", Password = "admin1234", Role = "Admin" },
@@ -37,5 +45,9 @@ namespace SupportTicketSystem.Data
            new User { Id = 6, FullName = "محمد رضایی", Username = "rezaei", Password = "rezaei1234", Role = "Employee" }
        );
         }
+
+
     }
+
+
 }
