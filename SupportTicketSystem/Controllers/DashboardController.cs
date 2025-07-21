@@ -105,29 +105,35 @@ namespace SupportTicketSystem.Api
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusDto dto)
         {
             var userId = int.Parse(User.FindFirst("UserId")!.Value);
-            var user = await _context.Users.FindAsync(userId);
 
             var ticket = await _context.Tickets
                 .Include(t => t.CreatedByUser)
-                .Where(t => t.AssignedToUserId == userId && t.Id == id)
-                .FirstOrDefaultAsync();
+                .Include(t => t.AssignedToUser)
+                .FirstOrDefaultAsync(t => t.AssignedToUserId == userId && t.Id == id);
 
             if (ticket == null)
                 return NotFound("تیکت یافت نشد یا اجازه دسترسی ندارید.");
 
+            bool wasDoneBefore = ticket.Status == "انجام شده";
+
             ticket.Status = dto.Status;
 
-            // add notification for user
-            var notif = new Notification
+            // when new ticket change status, send notification
+            if (dto.Status == "انجام شده" && !wasDoneBefore)
             {
-                TicketId = ticket.Id,
-                UserId = ticket.CreatedByUserId,
-                Message = $"تیکت «{ticket.Title}» توسط کارشناس {user.FullName} {dto.Status} شد.",
-                SenderName = user.FullName,
-                CreatedAt = DateTime.Now
-            };
+                var notif = new Notification
+                {
+                    TicketId = ticket.Id,
+                    UserId = ticket.CreatedByUserId,
+                    Message = $"تیکت شما با عنوان «{ticket.Title}» توسط کارشناس «{ticket.AssignedToUser?.FullName}» انجام شد.",
+                    SenderName = ticket.AssignedToUser?.FullName ?? "کارشناس",
+                    CreatedAt = DateTime.Now,
+                    IsRead = false
+                };
 
-            _context.Notifications.Add(notif);
+                _context.Notifications.Add(notif);
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "وضعیت با موفقیت به‌روزرسانی شد." });
@@ -200,10 +206,13 @@ namespace SupportTicketSystem.Api
             var userId = int.Parse(User.FindFirst("UserId")!.Value);
 
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId)
+                .Where(n => n.UserId == userId && !n.IsRead) // not read
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(10)
                 .ToListAsync();
+
+            notifications.ForEach(n => n.IsRead = true);// assign to read
+            await _context.SaveChangesAsync();
 
             return Ok(notifications);
         }
