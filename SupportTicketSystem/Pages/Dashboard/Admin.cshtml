@@ -111,24 +111,7 @@
 
 @section Scripts {
     <script>
-        // Sidebar toggle functionality for mobile
-        const sidebar = document.getElementById("sidebar");
-        const toggle = document.getElementById("menuToggle");
-        const overlay = document.getElementById("overlay");
-        const ROWS_PER_PAGE = 10;
-        let allTickets = [];
-        let itUsers = [];
-        let currentPage = 1;
 
-        toggle?.addEventListener("click", () => {
-            sidebar.classList.toggle("-translate-x-full");
-            overlay.classList.toggle("hidden");
-        });
-
-        overlay?.addEventListener("click", () => {
-            sidebar.classList.add("-translate-x-full");
-            overlay.classList.add("hidden");
-        });
 
         // Load tickets from API
         async function loadTickets() {
@@ -353,7 +336,6 @@
             });
         }
     </script>
-}
-
+    <script src="~/js/sidebar.js"></script>
 
 }
