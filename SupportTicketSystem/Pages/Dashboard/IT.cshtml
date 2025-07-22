@@ -26,25 +26,7 @@
     <!-- Main -->
     <main class="flex-1 p-6 transition-all w-full">
         <!-- Status Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">در انتظار بررسی</h3>
-                <p id="pending-count" class="text-2xl font-bold">۰</p>
-            </div>
-            <div class="bg-blue-100 border border-blue-300 text-blue-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">در حال انجام</h3>
-                <p id="inprogress-count" class="text-2xl font-bold">۰</p>
-            </div>
-            <div class="bg-green-100 border border-green-300 text-green-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">انجام شده</h3>
-                <p id="done-count" class="text-2xl font-bold">۰</p>
-            </div>
-            <div class="bg-red-100 border border-red-300 text-red-800 rounded-lg p-4 shadow">
-                <h3 class="text-lg font-semibold mb-1">باطل شده</h3>
-                <p id="canceled-count" class="text-2xl font-bold">۰</p>
-            </div>
-        </div>
-
+        <div id="status-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
         <!-- Ticket Table -->
         <div class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-semibold mb-4">درخواست‌های کاربران</h2>
@@ -74,18 +56,16 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script type="module">
+        import { renderStatusCards } from '/js/components/renderStatusCards.js';
 
-
-        // Constants
         const ROWS_PER_PAGE = 10;
         let currentPage = 1;
         let allTickets = [];
 
         function paginateData(data, page) {
             const start = (page - 1) * ROWS_PER_PAGE;
-            const end = start + ROWS_PER_PAGE;
-            return data.slice(start, end);
+            return data.slice(start, start + ROWS_PER_PAGE);
         }
 
         function renderPagination(totalItems) {
@@ -110,7 +90,6 @@
             table.innerHTML = "";
 
             const paginated = paginateData(allTickets, currentPage);
-
             paginated.forEach((item, index) => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
@@ -135,49 +114,44 @@
                 table.appendChild(row);
             });
 
-            // Set default values on dropdown
             document.querySelectorAll(".statusUpdate").forEach(select => {
                 const statusCell = select.closest("tr").children[6];
                 select.value = statusCell.textContent.trim();
 
-                select.addEventListener("change", (e) => {
+                select.addEventListener("change", async (e) => {
                     const id = select.dataset.id;
                     const newStatus = e.target.value;
-                    axios.put(`/api/tickets/${id}/status`, { status: newStatus })
-                        .then(() => {
-                            const ticket = allTickets.find(t => t.id == id);
-                            if (ticket) ticket.status = newStatus;
-                            renderStatusCards();
-                            renderTable(); // re-render to reflect status change
-                        })
-                        .catch(() => alert("خطا در تغییر وضعیت"));
+                    try {
+                        await axios.put(`/api/tickets/${id}/status`, { status: newStatus });
+                        const ticket = allTickets.find(t => t.id == id);
+                        if (ticket) ticket.status = newStatus;
+                        renderCardsFromLocal();
+                        renderTable();
+                    } catch {
+                        alert("خطا در تغییر وضعیت");
+                    }
                 });
             });
         }
 
-        function renderStatusCards() {
-            const statusCount = { "در انتظار بررسی": 0, "در حال انجام": 0, "انجام شده": 0, "باطل شده": 0 };
-            allTickets.forEach(t => {
-                const status = t.status || "در انتظار بررسی";
-                if (statusCount[status] !== undefined) statusCount[status]++;
-            });
-
-            document.getElementById("pending-count").textContent = statusCount["در انتظار بررسی"];
-            document.getElementById("inprogress-count").textContent = statusCount["در حال انجام"];
-            document.getElementById("done-count").textContent = statusCount["انجام شده"];
-            document.getElementById("canceled-count").textContent = statusCount["باطل شده"];
+        function renderCardsFromLocal() {
+            const summary = {
+                pending: allTickets.filter(t => t.status === "در انتظار بررسی").length,
+                inprogress: allTickets.filter(t => t.status === "در حال انجام").length,
+                done: allTickets.filter(t => t.status === "انجام شده").length,
+                canceled: allTickets.filter(t => t.status === "باطل شده").length
+            };
+            renderStatusCards("status-cards", summary);
         }
 
-        // Load data
-        document.addEventListener("DOMContentLoaded", () => {
-            axios.get("/api/dashboard/it").then(res => {
-                allTickets = res.data;
-                renderStatusCards();
-                renderPagination(allTickets.length);
-                renderTable();
-            });
+        document.addEventListener("DOMContentLoaded", async () => {
+            const res = await axios.get("/api/dashboard/it");
+            allTickets = res.data;
+            renderCardsFromLocal();
+            renderPagination(allTickets.length);
+            renderTable();
         });
     </script>
-    <script src="~/js/sidebar.js"></script>
 
+    <script src="~/js/sidebar.js"></script>
 }

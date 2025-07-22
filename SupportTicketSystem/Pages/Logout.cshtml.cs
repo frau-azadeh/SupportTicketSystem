@@ -9,8 +9,8 @@ namespace SupportTicketSystem.Pages.Dashboard
     {
         public async Task<IActionResult> OnGet()
         {
-            await HttpContext.SignOutAsync(); // لاگ‌اوت از کوکی
-            return RedirectToPage("/Login");  // هدایت به صفحه لاگین
+            await HttpContext.SignOutAsync(); 
+            return RedirectToPage("/Login");  
         }
     }
 }
