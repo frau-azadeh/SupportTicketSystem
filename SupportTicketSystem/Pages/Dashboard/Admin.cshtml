@@ -65,7 +65,8 @@
                         <option>باطل شده</option>
                     </select>
                 </div>
-                <button onclick="generatePDF()" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">دانلود گزارش PDF</button>
+                <!--pdf-->
+                <button id="pdfBtn" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">دانلود گزارش PDF</button>
             </div>
 
             <div id="report-content" class="w-100" ">
@@ -108,10 +109,10 @@
                 const res = await axios.get('/api/dashboard/admin');
                 const { tickets, summary, itUsers: users } = res.data;
 
-                // وضعیت‌ها
+                // status
                 renderStatusCards("status-cards", summary);
 
-                // ذخیره داده‌ها
+                // save data
                 allTickets = tickets;
                 itUsers = users;
                 currentPage = 1;
@@ -119,7 +120,7 @@
                 renderCharts(tickets, itUsers);
                 applyFilters();
 
-                // فیلترها
+                // filter
                 document.getElementById("searchInput").addEventListener("input", applyFilters);
                 document.getElementById("statusFilter").addEventListener("change", applyFilters);
             } catch (err) {
@@ -127,7 +128,7 @@
             }
         }
 
-        // رندر جدول با فیلترها
+        // render table with filter
         function applyFilters() {
             const search = document.getElementById("searchInput").value.trim().toLowerCase();
             const status = document.getElementById("statusFilter").value;
@@ -198,35 +199,18 @@
             }
         });
 
-        // نمودارها
+        // chart
         import { renderCharts } from '/js/chartRender.js';
 
 
         // PDF
-        async function generatePDF() {
-            const originalTickets = [...allTickets];
-            const originalPage = currentPage;
+        import { generateTicketPDF } from '/js/generatePdf.js';
+        document.getElementById("pdfBtn").addEventListener("click", () => {
+            generateTicketPDF(allTickets, renderTickets, currentPage, applyFilters);
+        });
 
-            renderTickets(allTickets);
-            await new Promise(resolve => setTimeout(resolve, 300));
 
-            const element = document.getElementById("report-content");
-            const opt = {
-                margin: 0.3,
-                filename: 'ticket-report.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, scrollY: 0 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'] }
-            };
-
-            html2pdf().set(opt).from(element).save().then(() => {
-                currentPage = originalPage;
-                applyFilters();
-            });
-        }
-
-        // شروع
+        // start
         document.addEventListener("DOMContentLoaded", loadDashboard);
     </script>
 
