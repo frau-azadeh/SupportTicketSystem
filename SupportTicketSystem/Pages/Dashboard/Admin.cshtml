@@ -28,6 +28,7 @@
 
     <!-- Main content -->
     <main class="flex-1 p-4 md:p-6 grid grid-cols-1">
+
         <!--chart-->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="bg-white rounded-lg shadow p-4 ">
@@ -43,9 +44,6 @@
                 </div>
             </div>
         </div>
-
-
-
 
         <!-- Status Cards -->
         <div id="status-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
@@ -69,7 +67,7 @@
                 <button id="pdfBtn" class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">دانلود گزارش PDF</button>
             </div>
 
-            <div id="report-content" class="w-100" ">
+            <div id="report-content" class="w-100">
                 <table class="w-full text-sm text-right border-collapse min-w-[600px] rounded-md">
                     <thead class="bg-gray-100 text-gray-700 rounded-md">
                         <tr>
@@ -93,133 +91,94 @@
     </main>
 </div>
 
-
-
 @section Scripts {
     <script type="module">
+        //  Import necessary modules
         import { renderStatusCards } from '/js/statusCards.js';
+        import { renderCharts } from '/js/chartRender.js';
+        import { generateTicketPDF } from '/js/generatePdf.js';
+        import { setupTicketFilters } from '/js/ticketFilter.js';
+
+        //  DO NOT import renderPagination from multiple files
+        //  ONLY import from one source (tableManager.js in this case)
+        import { renderTable, renderPagination } from '/js/tableManager.js';
 
         const ROWS_PER_PAGE = 10;
         let allTickets = [];
         let itUsers = [];
         let currentPage = 1;
+        let filterController;
 
+        //  Load dashboard data and initialize UI
         async function loadDashboard() {
             try {
                 const res = await axios.get('/api/dashboard/admin');
                 const { tickets, summary, itUsers: users } = res.data;
 
-                // status
                 renderStatusCards("status-cards", summary);
-
-                // save data
                 allTickets = tickets;
                 itUsers = users;
                 currentPage = 1;
 
                 renderCharts(tickets, itUsers);
-                applyFilters();
 
-                // filter
-                document.getElementById("searchInput").addEventListener("input", applyFilters);
-                document.getElementById("statusFilter").addEventListener("change", applyFilters);
+                //  Setup filters and pagination
+                filterController = setupTicketFilters(
+                    allTickets,
+                    renderPaginated,           // Callback to render filtered tickets
+                    (page) => currentPage = page,
+                    () => currentPage
+                );
+
+                filterController.applyFilters();
             } catch (err) {
                 console.error("خطا در دریافت داده‌ها:", err);
             }
         }
 
-        // render table with filter
-        function applyFilters() {
-            const search = document.getElementById("searchInput").value.trim().toLowerCase();
-            const status = document.getElementById("statusFilter").value;
-            const filtered = allTickets.filter(t => {
-                const matchName = t.userName.toLowerCase().includes(search);
-                const matchStatus = !status || t.status === status;
-                return matchName && matchStatus;
-            });
-            renderPaginated(filtered);
-        }
-
+        //  Render paginated ticket table
         function renderPaginated(tickets) {
-            const start = (currentPage - 1) * ROWS_PER_PAGE;
-            const pageData = tickets.slice(start, start + ROWS_PER_PAGE);
-            renderTickets(pageData);
-            renderPagination(tickets.length);
+            renderTable(tickets, itUsers, currentPage, ROWS_PER_PAGE);
+            renderPagination(
+                tickets.length,
+                ROWS_PER_PAGE,
+                currentPage,
+                (page) => {
+                    currentPage = page;
+                    renderPaginated(tickets);
+                }
+            );
         }
 
-        function renderTickets(tickets) {
-            const table = document.getElementById("ticketTable");
-            table.innerHTML = "";
-            tickets.forEach((item, index) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td class="border px-4 py-2">${(currentPage - 1) * ROWS_PER_PAGE + index + 1}</td>
-                    <td class="border px-4 py-2">${item.userName}</td>
-                    <td class="border px-4 py-2">${item.title}</td>
-                    <td class="border px-4 py-2">${item.status}</td>
-                    <td class="border px-4 py-2">
-                        <select class="assign-dropdown border rounded px-2 py-1 text-sm">
-                            <option value="">انتخاب کارشناس</option>
-                            ${itUsers.map(u => `
-                                <option value="${u.id}" ${u.id === item.assignedToId ? 'selected' : ''}>${u.fullName}</option>
-                            `).join('')}
-                        </select>
-                    </td>
-                    <td class="border px-4 py-2">
-                        <button class="update-btn bg-blue-500 text-white px-3 py-1 rounded text-xs" data-id="${item.id}">ثبت</button>
-                    </td>
-                `;
-                table.appendChild(row);
-            });
-        }
-
-        function renderPagination(totalRows) {
-            const pagination = document.getElementById("pagination");
-            const pageCount = Math.ceil(totalRows / ROWS_PER_PAGE);
-            pagination.innerHTML = "";
-            for (let i = 1; i <= pageCount; i++) {
-                const btn = document.createElement("button");
-                btn.textContent = i;
-                btn.className = `px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`;
-                btn.addEventListener("click", () => {
-                    currentPage = i;
-                    applyFilters();
-                });
-                pagination.appendChild(btn);
-            }
-        }
-
+        //  Handle ticket assignment
         document.addEventListener("click", async (e) => {
             if (e.target.classList.contains("update-btn")) {
                 const id = e.target.dataset.id;
                 const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
                 const userId = dropdown.value;
                 await axios.post(`/api/dashboard/assign/${id}`, { userId });
-                await loadDashboard(); // reload everything after update
+                await loadDashboard(); // Reload data after assignment
             }
         });
 
-        // chart
-        import { renderCharts } from '/js/chartRender.js';
-
-
-        // PDF
-        import { generateTicketPDF } from '/js/generatePdf.js';
+        //  PDF download: export all filtered tickets (not just current page)
         document.getElementById("pdfBtn").addEventListener("click", () => {
-            generateTicketPDF(allTickets, renderTickets, currentPage, applyFilters);
+            const filteredTickets = filterController.getFiltered();
+            generateTicketPDF(filteredTickets); // Send all filtered data to PDF
         });
 
-
-        // start
+        //  Initialize dashboard on load
         document.addEventListener("DOMContentLoaded", loadDashboard);
     </script>
 
+    <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="~/js/sidebar.js"></script>
 }
 
 
-}
+
+
 
 
