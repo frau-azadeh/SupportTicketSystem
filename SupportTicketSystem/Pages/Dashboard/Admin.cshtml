@@ -151,15 +151,37 @@
         }
 
         //  Handle ticket assignment
-        document.addEventListener("click", async (e) => {
-            if (e.target.classList.contains("update-btn")) {
-                const id = e.target.dataset.id;
-                const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
-                const userId = dropdown.value;
-                await axios.post(`/api/dashboard/assign/${id}`, { userId });
-                await loadDashboard(); // Reload data after assignment
+           document.addEventListener("click", async (e) => {
+          if (e.target.classList.contains("update-btn")) {
+            const id = e.target.dataset.id;
+            const dropdown = e.target.closest("tr").querySelector("select.assign-dropdown");
+            const userId = dropdown.value;
+
+            const res = await axios.post(`/api/dashboard/assign/${id}`, { userId });
+
+            const ticket = allTickets.find(t => t.id == id);
+            if (ticket) {
+              ticket.assignedToId = parseInt(userId);
+              const selectedUser = itUsers.find(u => u.id == userId);
+              ticket.assignedTo = selectedUser ? selectedUser.fullName : "ناشناس";
+              ticket.status = "در حال انجام";  // ← این خط مهمه
             }
+
+            filterController.applyFilters();
+
+            // 🔁 اضافه کن: بازمحاسبه کارت‌های وضعیت
+            const summary = {
+              pending: allTickets.filter(t => t.status === "در انتظار بررسی").length,
+              inprogress: allTickets.filter(t => t.status === "در حال انجام").length,
+              done: allTickets.filter(t => t.status === "انجام شده").length,
+              canceled: allTickets.filter(t => t.status === "باطل شده").length,
+            };
+            renderStatusCards("status-cards", summary);
+          }
         });
+
+
+
 
         //  PDF download: export all filtered tickets (not just current page)
         document.getElementById("pdfBtn").addEventListener("click", () => {
