@@ -14,7 +14,7 @@ export function renderTickets(tickets, itUsers, currentPage, rowsPerPage) {
                 <select class="assign-dropdown border rounded px-2 py-1 text-sm">
                     <option value="">انتخاب کارشناس</option>
                     ${itUsers.map(u => `
-                        <option value="${u.id}" ${u.id === item.assignedToId ? 'selected' : ''}>${u.fullName}</option>
+                        <option value="${u.id}" ${String(u.id) === String(item.assignedToId) ? 'selected' : ''}>${u.fullName}</option>
                     `).join('')}
                 </select>
             </td>
@@ -25,6 +25,7 @@ export function renderTickets(tickets, itUsers, currentPage, rowsPerPage) {
         table.appendChild(row);
     });
 }
+
 
 export function renderPagination(totalRows, rowsPerPage, currentPage, onPageChange) {
     const pagination = document.getElementById("pagination");
