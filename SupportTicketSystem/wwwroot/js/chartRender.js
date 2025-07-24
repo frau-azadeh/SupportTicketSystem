@@ -1,5 +1,15 @@
-﻿
+﻿let donutChartInstance = null;
+let barChartInstance = null;
+
 export function renderCharts(tickets, itUsers) {
+    // Destroy previous charts if they exist
+    if (donutChartInstance) {
+        donutChartInstance.destroy();
+    }
+    if (barChartInstance) {
+        barChartInstance.destroy();
+    }
+
     const ticketCountByUser = {};
     tickets.forEach(t => {
         if (t.assignedTo !== "هنوز ارجاع نشده") {
@@ -10,7 +20,7 @@ export function renderCharts(tickets, itUsers) {
     const donutLabels = Object.keys(ticketCountByUser);
     const donutValues = Object.values(ticketCountByUser);
 
-    new Chart(document.getElementById("donutChart"), {
+    donutChartInstance = new Chart(document.getElementById("donutChart"), {
         type: 'doughnut',
         data: {
             labels: donutLabels,
@@ -47,7 +57,7 @@ export function renderCharts(tickets, itUsers) {
         backgroundColor: ['#facc15', '#3b82f6', '#10b981', '#ef4444'][i]
     }));
 
-    new Chart(document.getElementById("barChart"), {
+    barChartInstance = new Chart(document.getElementById("barChart"), {
         type: 'bar',
         data: {
             labels: barLabels,
