@@ -56,6 +56,36 @@ namespace SupportTicketSystem.Api
             return Ok(response);
         }
 
+        [HttpPost("assign/{ticketId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AssignTicket(int ticketId, [FromBody] AssignDto dto)
+        {
+            var ticket = await _context.Tickets
+                .Include(t => t.CreatedByUser)
+                .Include(t => t.AssignedToUser)
+                .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            if (ticket == null)
+                return NotFound("تیکت پیدا نشد");
+
+            ticket.AssignedToUserId = dto.UserId;
+            ticket.Status = "در حال انجام";
+
+            await _context.SaveChangesAsync();
+
+            var updated = new
+            {
+                ticket.Id,
+                ticket.Title,
+                UserName = ticket.CreatedByUser.FullName,
+                Status = ticket.Status,
+                AssignedToId = ticket.AssignedToUserId,
+                AssignedTo = _context.Users.First(u => u.Id == ticket.AssignedToUserId).FullName
+            };
+
+            return Ok(updated);
+        }
+
         [HttpGet("it")]
         [Authorize(Roles = "IT")]
         public async Task<IActionResult> GetITTickets()
@@ -75,30 +105,11 @@ namespace SupportTicketSystem.Api
                 t.Priority,
                 t.Status,
                 UserName = t.CreatedByUser.FullName,
-                FileUrl = !string.IsNullOrEmpty(t.AttachmentPath)
-                    ? $"/uploads/{t.AttachmentPath}"
-                    : null
+                FileUrl = !string.IsNullOrEmpty(t.AttachmentPath) ? $"/uploads/{t.AttachmentPath}" : null
             });
 
             return Ok(response);
         }
-
-        [HttpPost("assign/{ticketId}")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> AssignTicket(int ticketId, [FromBody] AssignDto dto)
-        {
-            var ticket = await _context.Tickets.FindAsync(ticketId);
-
-            if (ticket == null)
-                return NotFound("تیکت پیدا نشد");
-
-            ticket.AssignedToUserId = dto.UserId;
-            ticket.Status = "در حال انجام";
-
-            await _context.SaveChangesAsync();
-            return Ok(new { message = "تیکت با موفقیت ارجاع داده شد" });
-        }
-
 
         [HttpPut("/api/tickets/{id}/status")]
         [Authorize(Roles = "IT")]
@@ -118,7 +129,6 @@ namespace SupportTicketSystem.Api
 
             ticket.Status = dto.Status;
 
-            // when new ticket change status, send notification
             if (dto.Status == "انجام شده" && !wasDoneBefore)
             {
                 var notif = new Notification
@@ -139,43 +149,22 @@ namespace SupportTicketSystem.Api
             return Ok(new { message = "وضعیت با موفقیت به‌روزرسانی شد." });
         }
 
-
-        public class AssignDto
-        {
-            public int UserId { get; set; }
-        }
-
-        public class StatusDto
-        {
-            public string Status { get; set; } = string.Empty;
-        }
-
         [HttpGet("admin/charts")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetChartData()
         {
-            // get user it 
-            var itUsers = await _context.Users
-                .Where(u => u.Role == "IT")
-                .ToListAsync();
+            var itUsers = await _context.Users.Where(u => u.Role == "IT").ToListAsync();
 
-            // asign to it
             var tickets = await _context.Tickets
                 .Include(t => t.AssignedToUser)
                 .Where(t => t.AssignedToUserId != null)
                 .ToListAsync();
 
-            // donat
             var donutData = tickets
                 .GroupBy(t => t.AssignedToUser!.FullName)
-                .Select(g => new
-                {
-                    user = g.Key,
-                    count = g.Count()
-                })
+                .Select(g => new { user = g.Key, count = g.Count() })
                 .ToList();
 
-            // bar
             var barData = itUsers.Select(user =>
             {
                 var userTickets = tickets.Where(t => t.AssignedToUserId == user.Id);
@@ -189,16 +178,9 @@ namespace SupportTicketSystem.Api
                 };
             }).ToList();
 
-            return Ok(new
-            {
-                donut = donutData,
-                bar = barData
-            });
+            return Ok(new { donut = donutData, bar = barData });
         }
 
-
-
-        //  API: Get Notifications for Logged-in User
         [HttpGet("/api/notifications")]
         [Authorize(Roles = "Employee")]
         public async Task<IActionResult> GetMyNotifications()
@@ -206,16 +188,25 @@ namespace SupportTicketSystem.Api
             var userId = int.Parse(User.FindFirst("UserId")!.Value);
 
             var notifications = await _context.Notifications
-                .Where(n => n.UserId == userId && !n.IsRead) // not read
+                .Where(n => n.UserId == userId && !n.IsRead)
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(10)
                 .ToListAsync();
 
-            notifications.ForEach(n => n.IsRead = true);// assign to read
+            notifications.ForEach(n => n.IsRead = true);
             await _context.SaveChangesAsync();
 
             return Ok(notifications);
         }
 
+        public class AssignDto
+        {
+            public int UserId { get; set; }
+        }
+
+        public class StatusDto
+        {
+            public string Status { get; set; } = string.Empty;
+        }
     }
 }
