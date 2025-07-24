@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: support-ticket-system
+    env: dotnet
+    buildCommand: dotnet build
+    startCommand: dotnet run --urls=http://0.0.0.0:10000
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+    autoDeploy: true
