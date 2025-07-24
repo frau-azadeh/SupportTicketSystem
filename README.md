@@ -2,7 +2,7 @@
 
 A modern **Support Ticket Management System** built with **ASP.NET Core Razor Pages**, leveraging **TailwindCSS**, **modular JavaScript**, and a clean component-based architecture.
 
-[Live GitHub Repo](https://github.com/frau-azadeh/SupportTicketSystem)
+[Live Demo](https://supportticketsystem.onrender.com/)
 
 ## 📌 Features
 
